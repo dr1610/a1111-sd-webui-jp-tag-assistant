@@ -7,25 +7,48 @@
 
     const css = `
     .jpta-panel {
-        margin: 8px 0 10px;
-        padding: 8px;
+        margin: 8px 0 12px;
+        padding: 0;
         border: 1px solid var(--block-border-color, #4b5563);
         border-radius: 6px;
-        background: color-mix(in srgb, var(--body-background-fill, #111827) 92%, var(--neutral-500, #6b7280));
+        background: var(--block-background-fill, #111827);
         color: var(--body-text-color, #f3f4f6);
         font: 13px/1.35 sans-serif;
+        overflow: hidden;
+    }
+    .jpta-panel summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 30px;
+        padding: 6px 8px;
+        cursor: pointer;
+        color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+        font-weight: 700;
+        user-select: none;
+    }
+    .jpta-panel summary::-webkit-details-marker {
+        display: none;
+    }
+    .jpta-panel summary::before {
+        content: ">";
+        display: inline-block;
+        width: 10px;
+        transform: rotate(0deg);
+        transition: transform 120ms ease;
+    }
+    .jpta-panel[open] summary::before {
+        transform: rotate(90deg);
+    }
+    .jpta-body {
+        padding: 0 8px 8px;
     }
     .jpta-top {
         display: flex;
         align-items: center;
         gap: 8px;
         margin-bottom: 7px;
-    }
-    .jpta-title {
-        flex: 0 0 auto;
-        color: var(--body-text-color-subdued, #9ca3af);
-        font-size: 12px;
-        font-weight: 700;
     }
     .jpta-input {
         flex: 1 1 auto;
@@ -34,8 +57,13 @@
         padding: 3px 8px;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
-        background: var(--input-background-fill, #111827);
-        color: var(--input-text-color, #f9fafb);
+        background: var(--input-background-fill, #1f2937) !important;
+        color: var(--input-text-color, #f9fafb) !important;
+        box-shadow: none;
+        outline: none;
+    }
+    .jpta-input::placeholder {
+        color: var(--input-placeholder-color, #8b95a5);
     }
     .jpta-search {
         flex: 0 0 auto;
@@ -171,12 +199,13 @@
     }
 
     function createPanel(tab) {
-        const panel = document.createElement("div");
+        const panel = document.createElement("details");
         panel.className = "jpta-panel";
         panel.dataset.jptaTab = tab;
         panel.innerHTML = `
+            <summary>JP Tag Assistant</summary>
+            <div class="jpta-body">
             <div class="jpta-top">
-                <span class="jpta-title">JP Tag Assistant</span>
                 <input class="jpta-input" type="text" placeholder="日本語でタグ検索..." />
                 <button class="jpta-search" type="button">Search</button>
             </div>
@@ -184,6 +213,7 @@
             <div class="jpta-list jpta-results"><span class="jpta-empty">日本語を入力してください</span></div>
             <div class="jpta-section-title">Related</div>
             <div class="jpta-list jpta-related"><span class="jpta-empty">候補を選ぶと関連タグを表示します</span></div>
+            </div>
         `;
 
         const input = panel.querySelector(".jpta-input");
@@ -280,7 +310,7 @@
 
     function attachTab(tab) {
         if (state.attached.has(tab)) return;
-        const area = promptArea(tab);
+        const area = negativeArea(tab) || promptArea(tab);
         const wrapper = promptWrapper(area);
         if (!area || !wrapper) return;
         const existing = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
