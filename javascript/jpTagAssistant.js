@@ -1,0 +1,305 @@
+(() => {
+    const state = {
+        config: null,
+        attached: new Set(),
+        selected: {},
+    };
+
+    const css = `
+    .jpta-panel {
+        margin: 8px 0 10px;
+        padding: 8px;
+        border: 1px solid var(--block-border-color, #4b5563);
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--body-background-fill, #111827) 92%, var(--neutral-500, #6b7280));
+        color: var(--body-text-color, #f3f4f6);
+        font: 13px/1.35 sans-serif;
+    }
+    .jpta-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 7px;
+    }
+    .jpta-title {
+        flex: 0 0 auto;
+        color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .jpta-input {
+        flex: 1 1 auto;
+        min-width: 120px;
+        height: 30px;
+        padding: 3px 8px;
+        border: 1px solid var(--input-border-color, #4b5563);
+        border-radius: 5px;
+        background: var(--input-background-fill, #111827);
+        color: var(--input-text-color, #f9fafb);
+    }
+    .jpta-search {
+        flex: 0 0 auto;
+        height: 30px;
+        padding: 3px 10px;
+        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border-radius: 5px;
+        background: var(--button-secondary-background-fill, #374151);
+        color: var(--button-secondary-text-color, #f9fafb);
+        cursor: pointer;
+    }
+    .jpta-section-title {
+        margin: 5px 0 4px;
+        color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+    }
+    .jpta-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .jpta-item {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+        max-width: 220px;
+        cursor: pointer;
+        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border-radius: 5px;
+        padding: 4px 7px;
+        background: var(--button-secondary-background-fill, #1f2937);
+        color: var(--button-secondary-text-color, #f9fafb);
+        text-align: left;
+        line-height: 1.22;
+        white-space: nowrap;
+    }
+    .jpta-item:hover,
+    .jpta-item.selected {
+        background: var(--button-primary-background-fill, #2563eb);
+        color: var(--button-primary-text-color, #ffffff);
+    }
+    .jpta-main {
+        display: inline-flex;
+        align-items: baseline;
+        max-width: 100%;
+    }
+    .jpta-tag {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .jpta-count {
+        margin-left: 5px;
+        opacity: 0.68;
+        font-size: 11px;
+    }
+    .jpta-ja {
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        opacity: 0.72;
+        font-size: 11px;
+        font-weight: 400;
+    }
+    .jpta-empty {
+        color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+    }`;
+
+    function appRoot() {
+        return typeof gradioApp === "function" ? gradioApp() : document;
+    }
+
+    function ensureStyle() {
+        if (document.getElementById("jpta-style")) return;
+        const style = document.createElement("style");
+        style.id = "jpta-style";
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    async function fetchJson(url) {
+        const separator = url.includes("?") ? "&" : "?";
+        const response = await fetch(`${url}${separator}${Date.now()}`);
+        if (!response.ok) {
+            console.error(`JP Tag Assistant: ${url} returned ${response.status}`);
+            return null;
+        }
+        return response.json();
+    }
+
+    async function loadConfig() {
+        state.config = await fetchJson("jptagapi/v1/config") || {
+            enable: true,
+            maxResults: 32,
+            relatedMaxResults: 24,
+        };
+    }
+
+    function visibleTag(tag) {
+        if (window.TAC_CFG?.replaceUnderscores) {
+            return tag.replaceAll("_", " ");
+        }
+        return tag;
+    }
+
+    function promptArea(tab) {
+        return appRoot().querySelector(`#${tab}_prompt textarea, textarea#${tab}_prompt`);
+    }
+
+    function negativeArea(tab) {
+        return appRoot().querySelector(`#${tab}_neg_prompt textarea, textarea#${tab}_neg_prompt`);
+    }
+
+    function promptWrapper(area) {
+        return area?.closest(".block, .form, .gradio-container, div") || area?.parentElement;
+    }
+
+    function insertTag(area, tag) {
+        if (!area) return;
+        const insert = visibleTag(tag);
+        const start = area.selectionStart ?? area.value.length;
+        const end = area.selectionEnd ?? start;
+        const before = area.value.slice(0, start);
+        const after = area.value.slice(end);
+        const prefix = before.length && !/[\s,(]$/.test(before) ? ", " : "";
+        const suffix = after.length && !/^\s*,/.test(after) ? ", " : "";
+        area.value = `${before}${prefix}${insert}${suffix}${after}`;
+        const caret = before.length + prefix.length + insert.length + suffix.length;
+        area.focus();
+        area.setSelectionRange(caret, caret);
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function createPanel(tab) {
+        const panel = document.createElement("div");
+        panel.className = "jpta-panel";
+        panel.dataset.jptaTab = tab;
+        panel.innerHTML = `
+            <div class="jpta-top">
+                <span class="jpta-title">JP Tag Assistant</span>
+                <input class="jpta-input" type="text" placeholder="日本語でタグ検索..." />
+                <button class="jpta-search" type="button">Search</button>
+            </div>
+            <div class="jpta-section-title">Candidates</div>
+            <div class="jpta-list jpta-results"><span class="jpta-empty">日本語を入力してください</span></div>
+            <div class="jpta-section-title">Related</div>
+            <div class="jpta-list jpta-related"><span class="jpta-empty">候補を選ぶと関連タグを表示します</span></div>
+        `;
+
+        const input = panel.querySelector(".jpta-input");
+        const search = panel.querySelector(".jpta-search");
+        search.addEventListener("click", () => runSearch(tab, panel));
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                runSearch(tab, panel);
+            }
+        });
+        input.addEventListener("input", () => {
+            clearTimeout(input._jptaTimer);
+            input._jptaTimer = setTimeout(() => runSearch(tab, panel), 220);
+        });
+        return panel;
+    }
+
+    function renderItems(container, tab, items, options = {}) {
+        container.textContent = "";
+        if (!items.length) {
+            const empty = document.createElement("span");
+            empty.className = "jpta-empty";
+            empty.textContent = options.empty || "候補なし";
+            container.appendChild(empty);
+            return;
+        }
+
+        items.forEach((item) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "jpta-item";
+            button.dataset.tag = item.tag;
+            if (state.selected[tab] === item.tag) button.classList.add("selected");
+
+            const main = document.createElement("span");
+            main.className = "jpta-main";
+            const tag = document.createElement("span");
+            tag.className = "jpta-tag";
+            tag.textContent = visibleTag(item.tag);
+            main.appendChild(tag);
+
+            if (item.count) {
+                const count = document.createElement("span");
+                count.className = "jpta-count";
+                count.textContent = item.count;
+                main.appendChild(count);
+            }
+
+            button.appendChild(main);
+            if (item.labelJa) {
+                const ja = document.createElement("span");
+                ja.className = "jpta-ja";
+                ja.textContent = item.labelJa;
+                button.title = `${visibleTag(item.tag)}\n${item.labelJa}`;
+                button.appendChild(ja);
+            }
+
+            button.addEventListener("mousedown", (event) => event.preventDefault());
+            button.addEventListener("click", (event) => {
+                const target = event.shiftKey ? negativeArea(tab) : promptArea(tab);
+                insertTag(target, item.tag);
+                state.selected[tab] = item.tag;
+                container.querySelectorAll(".jpta-item").forEach((el) => {
+                    el.classList.toggle("selected", el.dataset.tag === item.tag);
+                });
+                loadRelated(tab, item.tag);
+            });
+            container.appendChild(button);
+        });
+    }
+
+    async function runSearch(tab, panel) {
+        if (!state.config?.enable) return;
+        const query = panel.querySelector(".jpta-input").value.trim();
+        const results = panel.querySelector(".jpta-results");
+        if (!query) {
+            renderItems(results, tab, [], { empty: "日本語を入力してください" });
+            return;
+        }
+        const limit = state.config.maxResults || 32;
+        const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+        renderItems(results, tab, data?.results || [], { empty: "候補なし" });
+    }
+
+    async function loadRelated(tab, tag) {
+        const panel = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
+        const related = panel?.querySelector(".jpta-related");
+        if (!related) return;
+        const limit = state.config.relatedMaxResults || 24;
+        const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
+        renderItems(related, tab, data?.results || [], { empty: "関連タグなし" });
+    }
+
+    function attachTab(tab) {
+        if (state.attached.has(tab)) return;
+        const area = promptArea(tab);
+        const wrapper = promptWrapper(area);
+        if (!area || !wrapper) return;
+        const existing = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
+        if (existing) {
+            state.attached.add(tab);
+            return;
+        }
+        const panel = createPanel(tab);
+        wrapper.insertAdjacentElement("afterend", panel);
+        state.attached.add(tab);
+    }
+
+    async function setup() {
+        ensureStyle();
+        if (!state.config) await loadConfig();
+        if (!state.config?.enable) return;
+        attachTab("txt2img");
+        attachTab("img2img");
+    }
+
+    onUiUpdate(setup);
+})();

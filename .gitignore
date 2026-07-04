@@ -1,0 +1,6 @@
+__pycache__/
+tags/.download/
+tags/danbooru_tags.csv
+tags/danbooru_tags_cooccurrence.csv
+tags/danbooru_csv_meta.json
+tags/temp/
