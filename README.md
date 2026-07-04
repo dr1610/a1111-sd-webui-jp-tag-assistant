@@ -7,6 +7,7 @@ Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / A
 ## Features
 
 - Japanese keyword search for Danbooru tags
+- English tag and alias search, e.g. `x-ray`, `xray`, and `x ray`
 - Candidate chips with English tag, Japanese label, and tag count
 - Ambiguous-word expansion, e.g. `腕` shows `arms`, `bare arms`, `arms up`, `crossed arms`
 - Related tag suggestions from Danbooru cooccurrence data

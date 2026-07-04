@@ -17,6 +17,7 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
+TAG_ALIAS_CACHE = {"mtime": None, "data": {}}
 TRANSLATION_CACHE = {"mtime": None, "data": {}}
 DICTIONARY_CACHE = {"mtime": None, "data": []}
 RELATION_CACHE = {"mtime": None, "data": {}}
@@ -40,6 +41,18 @@ def visible_tag(tag: str):
 
 def split_aliases(text: str):
     return [part.strip() for part in (text or "").replace("；", "|").replace("、", "|").split("|") if part.strip()]
+
+
+def split_tag_aliases(text: str):
+    return [
+        normalize_tag(part)
+        for part in (text or "").replace("|", ",").split(",")
+        if normalize_tag(part)
+    ]
+
+
+def compact_key(text: str):
+    return "".join(char for char in normalize_tag(text) if char.isalnum())
 
 
 def unpack_bundled_cooccurrence():
@@ -98,6 +111,37 @@ def load_tag_counts():
     TAG_COUNT_CACHE["data"] = counts
     print(f"JP Tag Assistant: loaded {len(counts)} tag counts from {path.name}.")
     return counts
+
+
+def load_tag_aliases():
+    path = tag_count_path()
+    if not valid_file(path):
+        return {}
+
+    mtime = path.stat().st_mtime
+    if TAG_ALIAS_CACHE["mtime"] == mtime:
+        return TAG_ALIAS_CACHE["data"]
+
+    aliases = {}
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.reader(handle)
+            for row in reader:
+                if len(row) < 4:
+                    continue
+                tag = normalize_tag(row[0])
+                if not tag or tag == "tag":
+                    continue
+                tag_aliases = split_tag_aliases(row[3])
+                if tag_aliases:
+                    aliases[tag] = tag_aliases
+    except Exception as exc:
+        print(f"JP Tag Assistant: failed to read aliases from {path.name}: {exc}")
+
+    TAG_ALIAS_CACHE["mtime"] = mtime
+    TAG_ALIAS_CACHE["data"] = aliases
+    print(f"JP Tag Assistant: loaded aliases for {len(aliases)} tags from {path.name}.")
+    return aliases
 
 
 def translation_files():
@@ -294,6 +338,45 @@ def tag_boundary_match(query: str, tag: str):
     return query in tag.split("_")
 
 
+def score_english_tag_query(query: str, tag: str, aliases=None):
+    aliases = aliases or []
+    q = normalize_tag(query)
+    if not q:
+        return 0, ""
+
+    visible = visible_tag(tag)
+    terms = [tag, visible, *aliases, *(visible_tag(alias) for alias in aliases)]
+    compact_query = compact_key(q)
+    best_score = 0
+    best_term = ""
+
+    for term in terms:
+        t = normalize_tag(term)
+        if not t:
+            continue
+        compact_term = compact_key(t)
+        if q == t:
+            score = 660
+        elif compact_query and compact_query == compact_term:
+            score = 650
+        elif tag_boundary_match(q, t):
+            score = 620
+        elif t.startswith(q):
+            score = 560
+        elif compact_query and compact_term.startswith(compact_query):
+            score = 540
+        elif q in t:
+            score = 500
+        else:
+            score = 0
+
+        if score > best_score:
+            best_score = score
+            best_term = term
+
+    return best_score, best_term
+
+
 def search_tags(query, limit=40):
     q = normalize_ja(query)
     if not q:
@@ -301,6 +384,7 @@ def search_tags(query, limit=40):
 
     limit = max(1, min(int(limit), 100))
     counts = load_tag_counts()
+    aliases = load_tag_aliases()
     results = {}
 
     for entry in load_dictionary():
@@ -322,10 +406,11 @@ def search_tags(query, limit=40):
     tag_query = normalize_tag(q)
     if tag_query:
         for tag, count in counts.items():
-            if tag_boundary_match(tag_query, tag):
-                score = 640 if tag == tag_query else 520
+            score, matched = score_english_tag_query(tag_query, tag, aliases.get(tag, []))
+            if score:
                 item = item_for_tag(tag, source="danbooru", score=score, matched=tag_query)
                 item["count"] = count
+                item["matched"] = matched
                 previous = results.get(tag)
                 if previous is None or item["score"] > previous["score"]:
                     results[tag] = item
@@ -396,6 +481,7 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
     @app.post("/jptagapi/v1/reload")
     async def reload_data():
         TAG_COUNT_CACHE["mtime"] = None
+        TAG_ALIAS_CACHE["mtime"] = None
         TRANSLATION_CACHE["mtime"] = None
         DICTIONARY_CACHE["mtime"] = None
         RELATION_CACHE["mtime"] = None
