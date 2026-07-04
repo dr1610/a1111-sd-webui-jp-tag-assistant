@@ -39,6 +39,8 @@ ja,tag,aliases
 
 ## Usage
 
+The WebUI panel intentionally keeps helper text minimal. This README is the main place for usage notes.
+
 1. Install this folder into `extensions/a1111-sd-webui-jp-tag-assistant`.
 2. Restart WebUI.
 3. Open txt2img or img2img.

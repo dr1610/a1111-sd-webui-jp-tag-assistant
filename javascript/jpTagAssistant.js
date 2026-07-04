@@ -155,9 +155,6 @@
         font-size: 11px;
         font-weight: 400;
     }
-    .jpta-empty {
-        color: var(--body-text-color-subdued, #9ca3af);
-        font-size: 12px;
     }`;
 
     function appRoot() {
@@ -306,9 +303,9 @@
                 <button class="jpta-search" type="button">Search</button>
             </div>
             <div class="jpta-section-title">Candidates</div>
-            <div class="jpta-list jpta-results"><span class="jpta-empty">日本語を入力してください</span></div>
+            <div class="jpta-list jpta-results"></div>
             <div class="jpta-section-title">Related</div>
-            <div class="jpta-list jpta-related"><span class="jpta-empty">候補を選ぶと関連タグを表示します</span></div>
+            <div class="jpta-list jpta-related"></div>
             </div>
         `;
 
@@ -331,13 +328,9 @@
         return panel;
     }
 
-    function renderItems(container, tab, items, options = {}) {
+    function renderItems(container, tab, items) {
         container.textContent = "";
         if (!items.length) {
-            const empty = document.createElement("span");
-            empty.className = "jpta-empty";
-            empty.textContent = options.empty || "候補なし";
-            container.appendChild(empty);
             return;
         }
 
@@ -391,12 +384,12 @@
         const query = panel.querySelector(".jpta-input").value.trim();
         const results = panel.querySelector(".jpta-results");
         if (!query) {
-            renderItems(results, tab, [], { empty: "日本語を入力してください" });
+            renderItems(results, tab, []);
             return;
         }
         const limit = state.config.maxResults || 32;
         const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-        renderItems(results, tab, data?.results || [], { empty: "候補なし" });
+        renderItems(results, tab, data?.results || []);
     }
 
     async function loadRelated(tab, tag) {
@@ -405,7 +398,7 @@
         if (!related) return;
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
-        renderItems(related, tab, data?.results || [], { empty: "関連タグなし" });
+        renderItems(related, tab, data?.results || []);
     }
 
     function attachTab(tab) {
