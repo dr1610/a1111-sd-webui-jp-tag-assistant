@@ -12,12 +12,16 @@
         padding: 0;
         border: 1px solid var(--block-border-color, #4b5563);
         border-radius: 6px;
-        background: var(--block-background-fill, #111827);
+        background: #111827;
         color: var(--body-text-color, #f3f4f6);
         font: 13px/1.35 sans-serif;
         overflow: visible;
         position: relative;
         z-index: 50;
+        width: 100%;
+        flex: 0 0 100%;
+        align-self: stretch;
+        box-sizing: border-box;
     }
     .jpta-panel[open] {
         z-index: 10020;
@@ -59,8 +63,8 @@
         padding: 8px;
         border: 1px solid var(--block-border-color, #4b5563);
         border-radius: 6px;
-        background: var(--block-background-fill, #111827);
-        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+        background: #0b1220;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
     }
     .jpta-panel[open] .jpta-body {
         display: block;
@@ -78,7 +82,7 @@
         padding: 3px 8px;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
-        background: var(--input-background-fill, #1f2937) !important;
+        background: #1f2937 !important;
         color: var(--input-text-color, #f9fafb) !important;
         box-shadow: none;
         outline: none;
@@ -116,7 +120,7 @@
         border: 1px solid var(--button-secondary-border-color, #4b5563);
         border-radius: 5px;
         padding: 4px 7px;
-        background: var(--button-secondary-background-fill, #1f2937);
+        background: #1f2937;
         color: var(--button-secondary-text-color, #f9fafb);
         text-align: left;
         line-height: 1.22;
@@ -201,6 +205,38 @@
 
     function promptWrapper(area) {
         return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
+    }
+
+    function tabSettingsArea(tab) {
+        return appRoot().querySelector(`#${tab}_tabs`) ||
+            appRoot().querySelector(`#${tab}_settings`) ||
+            appRoot().querySelector(`#${tab}_results`)?.previousElementSibling;
+    }
+
+    function placementAnchor(tab) {
+        const prompt = promptArea(tab);
+        const negative = negativeArea(tab);
+        const start = negative || prompt;
+        if (!start) return null;
+
+        const settings = tabSettingsArea(tab);
+        if (settings && settings.parentElement) {
+            return { element: settings, mode: "before" };
+        }
+
+        let node = promptWrapper(start);
+        while (node && node.parentElement && node !== appRoot()) {
+            if (prompt && negative && node.contains(prompt) && node.contains(negative)) {
+                return { element: node, mode: "after" };
+            }
+            const parent = node.parentElement;
+            if (prompt && negative && parent.contains(prompt) && parent.contains(negative)) {
+                return { element: parent, mode: "after" };
+            }
+            node = parent;
+        }
+
+        return { element: promptWrapper(start), mode: "after" };
     }
 
     function insertTag(area, tag) {
@@ -368,16 +404,15 @@
 
     function attachTab(tab) {
         if (state.attached.has(tab)) return;
-        const area = negativeArea(tab) || promptArea(tab);
-        const wrapper = promptWrapper(area);
-        if (!area || !wrapper) return;
+        const anchor = placementAnchor(tab);
+        if (!anchor) return;
         const existing = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
         if (existing) {
             state.attached.add(tab);
             return;
         }
         const panel = createPanel(tab);
-        wrapper.insertAdjacentElement("afterend", panel);
+        anchor.element.insertAdjacentElement(anchor.mode === "before" ? "beforebegin" : "afterend", panel);
         state.attached.add(tab);
     }
 
