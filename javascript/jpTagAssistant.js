@@ -3,6 +3,7 @@
         config: null,
         attached: new Set(),
         selected: {},
+        inserted: {},
     };
 
     const css = `
@@ -14,7 +15,12 @@
         background: var(--block-background-fill, #111827);
         color: var(--body-text-color, #f3f4f6);
         font: 13px/1.35 sans-serif;
-        overflow: hidden;
+        overflow: visible;
+        position: relative;
+        z-index: 50;
+    }
+    .jpta-panel[open] {
+        z-index: 10020;
     }
     .jpta-panel summary {
         display: flex;
@@ -42,7 +48,22 @@
         transform: rotate(90deg);
     }
     .jpta-body {
-        padding: 0 8px 8px;
+        display: none;
+        position: absolute;
+        z-index: 10021;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: min(360px, calc(100vh - 160px));
+        overflow: auto;
+        padding: 8px;
+        border: 1px solid var(--block-border-color, #4b5563);
+        border-radius: 6px;
+        background: var(--block-background-fill, #111827);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+    }
+    .jpta-panel[open] .jpta-body {
+        display: block;
     }
     .jpta-top {
         display: flex;
@@ -179,7 +200,7 @@
     }
 
     function promptWrapper(area) {
-        return area?.closest(".block, .form, .gradio-container, div") || area?.parentElement;
+        return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
     }
 
     function insertTag(area, tag) {
@@ -196,6 +217,39 @@
         area.focus();
         area.setSelectionRange(caret, caret);
         area.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function removeTag(area, tag) {
+        if (!area) return false;
+        const insert = visibleTag(tag).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = new RegExp(`(^|,\\s*)${insert}(?=\\s*,|\\s*$)\\s*,?\\s*`);
+        if (!pattern.test(area.value)) return false;
+        area.value = area.value
+            .replace(pattern, (match, prefix) => prefix && prefix.trim() ? prefix : "")
+            .replace(/,\s*,+/g, ", ")
+            .replace(/^\s*,\s*/, "")
+            .replace(/\s*,\s*$/, "");
+        area.focus();
+        const caret = area.value.length;
+        area.setSelectionRange(caret, caret);
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+    }
+
+    function insertionKey(targetKind, tag) {
+        return `${targetKind}:${tag}`;
+    }
+
+    function toggleTag(tab, targetKind, area, tag) {
+        state.inserted[tab] ||= {};
+        const key = insertionKey(targetKind, tag);
+        if (state.inserted[tab][key] && removeTag(area, tag)) {
+            delete state.inserted[tab][key];
+            return false;
+        }
+        insertTag(area, tag);
+        state.inserted[tab][key] = true;
+        return true;
     }
 
     function createPanel(tab) {
@@ -218,6 +272,9 @@
 
         const input = panel.querySelector(".jpta-input");
         const search = panel.querySelector(".jpta-search");
+        panel.addEventListener("toggle", () => {
+            if (panel.open) input.focus();
+        });
         search.addEventListener("click", () => runSearch(tab, panel));
         input.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
@@ -274,11 +331,12 @@
 
             button.addEventListener("mousedown", (event) => event.preventDefault());
             button.addEventListener("click", (event) => {
-                const target = event.shiftKey ? negativeArea(tab) : promptArea(tab);
-                insertTag(target, item.tag);
+                const targetKind = event.shiftKey ? "negative" : "prompt";
+                const target = targetKind === "negative" ? negativeArea(tab) : promptArea(tab);
+                const inserted = toggleTag(tab, targetKind, target, item.tag);
                 state.selected[tab] = item.tag;
                 container.querySelectorAll(".jpta-item").forEach((el) => {
-                    el.classList.toggle("selected", el.dataset.tag === item.tag);
+                    el.classList.toggle("selected", inserted && el.dataset.tag === item.tag);
                 });
                 loadRelated(tab, item.tag);
             });

@@ -10,8 +10,8 @@ Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / A
 - Candidate chips with English tag, Japanese label, and tag count
 - Ambiguous-word expansion, e.g. `腕` shows `arms`, `bare arms`, `arms up`, `crossed arms`
 - Related tag suggestions from Danbooru cooccurrence data
-- Click to insert into prompt
-- Shift+click to insert into negative prompt
+- Click to insert/remove the tag in prompt
+- Shift+click to insert/remove the tag in negative prompt
 - User dictionary support
 
 ## Data Files
