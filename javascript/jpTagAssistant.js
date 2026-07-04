@@ -4,6 +4,7 @@
         attached: new Set(),
         selected: {},
         inserted: {},
+        outsideClickAttached: false,
     };
 
     const css = `
@@ -167,6 +168,20 @@
         style.id = "jpta-style";
         style.textContent = css;
         document.head.appendChild(style);
+    }
+
+    function attachOutsideClickHandler() {
+        if (state.outsideClickAttached) return;
+        state.outsideClickAttached = true;
+        document.addEventListener("mousedown", (event) => {
+            const openPanels = [...appRoot().querySelectorAll(".jpta-panel[open]")];
+            if (!openPanels.length) return;
+            openPanels.forEach((panel) => {
+                if (!panel.contains(event.target)) {
+                    panel.open = false;
+                }
+            });
+        }, true);
     }
 
     async function fetchJson(url) {
@@ -417,6 +432,7 @@
 
     async function setup() {
         ensureStyle();
+        attachOutsideClickHandler();
         if (!state.config) await loadConfig();
         if (!state.config?.enable) return;
         attachTab("txt2img");
