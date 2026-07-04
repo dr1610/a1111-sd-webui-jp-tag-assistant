@@ -20,8 +20,10 @@
         z-index: 50;
         width: 100%;
         flex: 0 0 100%;
-        align-self: stretch;
+        align-self: flex-start;
         box-sizing: border-box;
+        height: auto !important;
+        min-height: 0 !important;
     }
     .jpta-panel[open] {
         z-index: 10020;
@@ -207,10 +209,9 @@
         return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
     }
 
-    function tabSettingsArea(tab) {
-        return appRoot().querySelector(`#${tab}_tabs`) ||
-            appRoot().querySelector(`#${tab}_settings`) ||
-            appRoot().querySelector(`#${tab}_results`)?.previousElementSibling;
+    function settingsTabs(tab) {
+        const settings = appRoot().querySelector(`#${tab}_settings`);
+        return settings?.closest(".tabs") || null;
     }
 
     function placementAnchor(tab) {
@@ -219,24 +220,29 @@
         const start = negative || prompt;
         if (!start) return null;
 
-        const settings = tabSettingsArea(tab);
-        if (settings && settings.parentElement) {
-            return { element: settings, mode: "before" };
+        const tabs = settingsTabs(tab);
+        if (tabs && tabs.parentElement) {
+            return { element: tabs, mode: "before" };
         }
 
         let node = promptWrapper(start);
         while (node && node.parentElement && node !== appRoot()) {
-            if (prompt && negative && node.contains(prompt) && node.contains(negative)) {
-                return { element: node, mode: "after" };
-            }
             const parent = node.parentElement;
             if (prompt && negative && parent.contains(prompt) && parent.contains(negative)) {
-                return { element: parent, mode: "after" };
+                node = parent;
+                continue;
             }
-            node = parent;
+            const parentRect = parent.getBoundingClientRect();
+            const startRect = start.getBoundingClientRect();
+            const wrapsSameRow = parentRect.top <= startRect.top + 2 && parentRect.bottom >= startRect.bottom - 2;
+            if (wrapsSameRow && parent.children.length <= 6) {
+                node = parent;
+                continue;
+            }
+            break;
         }
 
-        return { element: promptWrapper(start), mode: "after" };
+        return { element: node || promptWrapper(start), mode: "after" };
     }
 
     function insertTag(area, tag) {
