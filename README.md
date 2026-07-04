@@ -11,6 +11,7 @@ Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / A
 - Candidate chips with English tag, Japanese label, and tag count
 - Ambiguous-word expansion, e.g. `腕` shows `arms`, `bare arms`, `arms up`, `crossed arms`
 - Related tag suggestions from Danbooru cooccurrence data
+- Optional related-tag filtering to keep only general Danbooru tags
 - Click to insert/remove the tag in prompt
 - Shift+click to insert/remove the tag in negative prompt
 - User dictionary support
@@ -42,6 +43,8 @@ ja,tag,aliases
 
 The WebUI panel intentionally keeps helper text minimal. This README is the main place for usage notes.
 
+This extension is meant to complement tag completion extensions. Use JP Tag Assistant for Japanese concept search such as `膝立ち`, `四つんばい`, `下から`, or `横顔`; use a tag completion extension for broad English Danbooru tag-name completion.
+
 1. Install this folder into `extensions/a1111-sd-webui-jp-tag-assistant`.
 2. Restart WebUI.
 3. Open txt2img or img2img.
@@ -63,5 +66,8 @@ Settings are available under `JP Tag Assistant`.
 - `Enable JP Tag Assistant`
 - `Maximum search results`
 - `Maximum related tags`
+- `Show only general related tags`
 - `Use machine-translated Japanese labels`
 - `Maximum cached relations per tag`
+
+`Show only general related tags` is enabled by default. It removes artist, copyright, character, and meta tags from the Related section while leaving direct search candidates unchanged.

@@ -17,6 +17,7 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
+TAG_CATEGORY_CACHE = {"mtime": None, "data": {}}
 TAG_ALIAS_CACHE = {"mtime": None, "data": {}}
 TRANSLATION_CACHE = {"mtime": None, "data": {}}
 DICTIONARY_CACHE = {"mtime": None, "data": []}
@@ -111,6 +112,38 @@ def load_tag_counts():
     TAG_COUNT_CACHE["data"] = counts
     print(f"JP Tag Assistant: loaded {len(counts)} tag counts from {path.name}.")
     return counts
+
+
+def load_tag_categories():
+    path = tag_count_path()
+    if not valid_file(path):
+        return {}
+
+    mtime = path.stat().st_mtime
+    if TAG_CATEGORY_CACHE["mtime"] == mtime:
+        return TAG_CATEGORY_CACHE["data"]
+
+    categories = {}
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.reader(handle)
+            for row in reader:
+                if len(row) < 2:
+                    continue
+                tag = normalize_tag(row[0])
+                if not tag or tag == "tag":
+                    continue
+                try:
+                    categories[tag] = int(float(row[1]))
+                except ValueError:
+                    continue
+    except Exception as exc:
+        print(f"JP Tag Assistant: failed to read tag categories from {path.name}: {exc}")
+
+    TAG_CATEGORY_CACHE["mtime"] = mtime
+    TAG_CATEGORY_CACHE["data"] = categories
+    print(f"JP Tag Assistant: loaded categories for {len(categories)} tags from {path.name}.")
+    return categories
 
 
 def load_tag_aliases():
@@ -347,6 +380,7 @@ def score_english_tag_query(query: str, tag: str, aliases=None):
     visible = visible_tag(tag)
     terms = [tag, visible, *aliases, *(visible_tag(alias) for alias in aliases)]
     compact_query = compact_key(q)
+    is_phrase_query = "_" in q
     best_score = 0
     best_term = ""
 
@@ -365,7 +399,7 @@ def score_english_tag_query(query: str, tag: str, aliases=None):
             score = 560
         elif compact_query and compact_term.startswith(compact_query):
             score = 540
-        elif q in t:
+        elif not is_phrase_query and len(compact_query) >= 4 and q in t:
             score = 500
         else:
             score = 0
@@ -433,6 +467,14 @@ def attach_labels(items):
     return items
 
 
+def filter_related_items(items):
+    if not bool(getattr(shared.opts, "jpta_relatedGeneralOnly", True)):
+        return items
+
+    categories = load_tag_categories()
+    return [item for item in items if categories.get(item["tag"]) == 0]
+
+
 def on_ui_settings():
     shared.opts.add_option(
         "jpta_enable",
@@ -445,6 +487,10 @@ def on_ui_settings():
     shared.opts.add_option(
         "jpta_relatedMaxResults",
         shared.OptionInfo(24, "Maximum related tags", gr.Slider, {"minimum": 4, "maximum": 80, "step": 1}, section=JPTA_SECTION),
+    )
+    shared.opts.add_option(
+        "jpta_relatedGeneralOnly",
+        shared.OptionInfo(True, "Show only general related tags", section=JPTA_SECTION),
     )
     shared.opts.add_option(
         "jpta_useMachineJapaneseLabels",
@@ -463,6 +509,7 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
             "enable": bool(getattr(shared.opts, "jpta_enable", True)),
             "maxResults": int(getattr(shared.opts, "jpta_maxResults", 32)),
             "relatedMaxResults": int(getattr(shared.opts, "jpta_relatedMaxResults", 24)),
+            "relatedGeneralOnly": bool(getattr(shared.opts, "jpta_relatedGeneralOnly", True)),
         }
 
     @app.get("/jptagapi/v1/search")
@@ -475,12 +522,13 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
         if not key:
             return {"tag": tag, "results": []}
         relations = load_relations()
-        items = relations.get(key, [])[: max(0, min(int(limit), 100))]
+        items = filter_related_items(relations.get(key, []))[: max(0, min(int(limit), 100))]
         return {"tag": key, "results": attach_labels(items)}
 
     @app.post("/jptagapi/v1/reload")
     async def reload_data():
         TAG_COUNT_CACHE["mtime"] = None
+        TAG_CATEGORY_CACHE["mtime"] = None
         TAG_ALIAS_CACHE["mtime"] = None
         TRANSLATION_CACHE["mtime"] = None
         DICTIONARY_CACHE["mtime"] = None
