@@ -49,6 +49,13 @@ The WebUI panel intentionally keeps helper text minimal. This README is the main
 5. Click a candidate to insert it into the prompt.
 6. Shift+click to insert it into the negative prompt.
 
+Keyboard shortcuts inside the assistant input:
+
+- `ArrowUp` / `ArrowDown`: move through candidates
+- `Enter` / `Tab`: insert the active candidate into the prompt
+- `Shift+Enter` / `Shift+Tab`: insert the active candidate into the negative prompt
+- `Esc`: collapse the assistant panel
+
 ## Settings
 
 Settings are available under `JP Tag Assistant`.

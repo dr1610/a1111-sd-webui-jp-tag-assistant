@@ -4,6 +4,8 @@
         attached: new Set(),
         selected: {},
         inserted: {},
+        candidates: {},
+        candidateIndex: {},
         outsideClickAttached: false,
     };
 
@@ -130,6 +132,7 @@
         white-space: nowrap;
     }
     .jpta-item:hover,
+    .jpta-item.active,
     .jpta-item.selected {
         background: var(--button-primary-background-fill, #2563eb);
         color: var(--button-primary-text-color, #ffffff);
@@ -306,6 +309,26 @@
         return true;
     }
 
+    function setActiveCandidate(tab, panel, index) {
+        const items = state.candidates[tab] || [];
+        if (!items.length) return;
+        state.candidateIndex[tab] = (index + items.length) % items.length;
+        panel.querySelectorAll(".jpta-results .jpta-item").forEach((el, itemIndex) => {
+            el.classList.toggle("active", itemIndex === state.candidateIndex[tab]);
+        });
+    }
+
+    function applyItem(tab, panel, item, targetKind = "prompt") {
+        if (!item) return;
+        const target = targetKind === "negative" ? negativeArea(tab) : promptArea(tab);
+        const inserted = toggleTag(tab, targetKind, target, item.tag);
+        state.selected[tab] = item.tag;
+        panel.querySelectorAll(".jpta-item").forEach((el) => {
+            el.classList.toggle("selected", inserted && el.dataset.tag === item.tag);
+        });
+        loadRelated(tab, item.tag);
+    }
+
     function createPanel(tab) {
         const panel = document.createElement("details");
         panel.className = "jpta-panel";
@@ -314,7 +337,7 @@
             <summary>JP Tag Assistant</summary>
             <div class="jpta-body">
             <div class="jpta-top">
-                <input class="jpta-input" type="text" placeholder="日本語でタグ検索..." />
+                <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="日本語でタグ検索..." />
                 <button class="jpta-search" type="button">Search</button>
             </div>
             <div class="jpta-section-title">Candidates</div>
@@ -331,6 +354,22 @@
         });
         search.addEventListener("click", () => runSearch(tab, panel));
         input.addEventListener("keydown", (event) => {
+            const items = state.candidates[tab] || [];
+            if ((event.key === "ArrowDown" || event.key === "ArrowUp") && items.length) {
+                event.preventDefault();
+                setActiveCandidate(tab, panel, (state.candidateIndex[tab] || 0) + (event.key === "ArrowDown" ? 1 : -1));
+                return;
+            }
+            if ((event.key === "Enter" || event.key === "Tab") && items.length) {
+                event.preventDefault();
+                const index = state.candidateIndex[tab] || 0;
+                applyItem(tab, panel, items[index], event.shiftKey ? "negative" : "prompt");
+                return;
+            }
+            if (event.key === "Escape") {
+                panel.open = false;
+                return;
+            }
             if (event.key === "Enter") {
                 event.preventDefault();
                 runSearch(tab, panel);
@@ -343,18 +382,25 @@
         return panel;
     }
 
-    function renderItems(container, tab, items) {
+    function renderItems(container, tab, items, options = {}) {
         container.textContent = "";
+        const panel = container.closest(".jpta-panel");
+        if (options.kind === "candidates") {
+            state.candidates[tab] = items;
+            state.candidateIndex[tab] = 0;
+        }
         if (!items.length) {
             return;
         }
 
-        items.forEach((item) => {
+        items.forEach((item, index) => {
             const button = document.createElement("button");
             button.type = "button";
             button.className = "jpta-item";
             button.dataset.tag = item.tag;
+            button.dataset.index = index;
             if (state.selected[tab] === item.tag) button.classList.add("selected");
+            if (options.kind === "candidates" && index === state.candidateIndex[tab]) button.classList.add("active");
 
             const main = document.createElement("span");
             main.className = "jpta-main";
@@ -381,14 +427,8 @@
 
             button.addEventListener("mousedown", (event) => event.preventDefault());
             button.addEventListener("click", (event) => {
-                const targetKind = event.shiftKey ? "negative" : "prompt";
-                const target = targetKind === "negative" ? negativeArea(tab) : promptArea(tab);
-                const inserted = toggleTag(tab, targetKind, target, item.tag);
-                state.selected[tab] = item.tag;
-                container.querySelectorAll(".jpta-item").forEach((el) => {
-                    el.classList.toggle("selected", inserted && el.dataset.tag === item.tag);
-                });
-                loadRelated(tab, item.tag);
+                if (options.kind === "candidates") setActiveCandidate(tab, panel, index);
+                applyItem(tab, panel, item, event.shiftKey ? "negative" : "prompt");
             });
             container.appendChild(button);
         });
@@ -399,12 +439,12 @@
         const query = panel.querySelector(".jpta-input").value.trim();
         const results = panel.querySelector(".jpta-results");
         if (!query) {
-            renderItems(results, tab, []);
+            renderItems(results, tab, [], { kind: "candidates" });
             return;
         }
         const limit = state.config.maxResults || 32;
         const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-        renderItems(results, tab, data?.results || []);
+        renderItems(results, tab, data?.results || [], { kind: "candidates" });
     }
 
     async function loadRelated(tab, tag) {
