@@ -132,9 +132,33 @@
         user-select: none;
     }
     .jpta-exclude-licensed input {
+        appearance: none;
+        -webkit-appearance: none;
         width: 14px;
         height: 14px;
         margin: 0;
+        position: relative;
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        border: 1px solid var(--checkbox-border-color, #9ca3af);
+        border-radius: 3px;
+        background: #111827;
+        cursor: pointer;
+    }
+    .jpta-exclude-licensed input:checked {
+        border-color: var(--button-primary-background-fill, #2563eb);
+        background: var(--button-primary-background-fill, #2563eb);
+    }
+    .jpta-exclude-licensed input:checked::after {
+        content: "";
+        position: absolute;
+        left: 3px;
+        top: 1px;
+        width: 5px;
+        height: 8px;
+        border: solid #ffffff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
     }
     .jpta-section-title {
         display: flex;
