@@ -11,7 +11,7 @@ Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / A
 - Candidate chips with English tag, Japanese label, and tag count
 - Ambiguous-word expansion, e.g. `腕` shows `arms`, `bare arms`, `arms up`, `crossed arms`
 - Related tag suggestions from Danbooru cooccurrence data
-- Related tag modes such as Auto, Prompt Builder, Pose / Body, Location / Scene, NSFW, Off, and All
+- Related tag modes such as Auto, Recommended, Person, Scene / Objects, Style / Quality, NSFW, All, and Off
 - Related back/forward navigation while exploring suggestions
 - Click to insert/remove the tag in prompt
 - Shift+click to insert/remove the tag in negative prompt
@@ -66,7 +66,7 @@ This repository can also be installed as a ComfyUI custom node.
 5. Use the `tags` output as a comma-separated prompt fragment, or inspect `candidates` and `related`.
 
 The ComfyUI node does not edit prompt fields directly. It returns strings so it can be connected to prompt-building workflows.
-`related_limit` defaults to `0` because related-tag lookup may need to scan the cooccurrence file on first use. Increase it only when you want related tags in the workflow. Use `related_mode` to choose Auto, Prompt Builder, Pose / Body, Camera / Composition, Clothing / Appearance, Location / Scene, NSFW, All General, All, or Off.
+`related_limit` defaults to `0` because related-tag lookup may need to scan the cooccurrence file on first use. Increase it only when you want related tags in the workflow. Use `related_mode` to choose Auto, Recommended, Person, Scene / Objects, Style / Quality, NSFW, All, or Off.
 
 Keyboard shortcuts inside the assistant input:
 
@@ -87,4 +87,4 @@ Settings are available under `JP Tag Assistant`.
 - `Use machine-translated Japanese labels`
 - `Maximum cached relations per tag`
 
-`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `outdoors` uses Location / Scene, `kneeling` uses Pose / Body, `missionary` uses NSFW, and broad subject tags such as `1girl` use Prompt Builder. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. The Related dropdown is shown in Japanese by default; set `Related mode display language` to English if you prefer the English labels.
+`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `kneeling` and `school_uniform` use Person, `outdoors` and `from_below` use Scene / Objects, `masterpiece` uses Style / Quality, and `missionary` uses NSFW. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. The Related dropdown is shown in Japanese by default; set `Related mode display language` to English if you prefer the English labels.

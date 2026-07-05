@@ -14,13 +14,11 @@
 
     const relatedModeLabelsJa = {
         "Auto": "自動",
-        "Prompt Builder": "プロンプト補助",
-        "Pose / Body": "ポーズ/身体",
-        "Camera / Composition": "構図/カメラ",
-        "Clothing / Appearance": "服装/外見",
-        "Location / Scene": "場所/背景",
+        "Recommended": "おすすめ",
+        "Person": "人物",
+        "Scene / Objects": "背景・小物",
+        "Style / Quality": "画風・品質",
         "NSFW": "NSFW",
-        "All General": "通常タグすべて",
         "All": "すべて",
         "Off": "オフ",
     };
@@ -328,7 +326,7 @@
             relatedMaxResults: 24,
             relatedMode: "Auto",
             relatedModeLanguage: "Japanese",
-            relatedModes: ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"],
+            relatedModes: ["Auto", "Recommended", "Person", "Scene / Objects", "Style / Quality", "NSFW", "All", "Off"],
         };
     }
 
@@ -457,7 +455,7 @@
     }
 
     function relatedModeOptions() {
-        return state.config?.relatedModes || ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"];
+        return state.config?.relatedModes || ["Auto", "Recommended", "Person", "Scene / Objects", "Style / Quality", "NSFW", "All", "Off"];
     }
 
     function relatedModeLabel(mode) {

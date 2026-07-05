@@ -8,13 +8,11 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 RELATED_MODES = [
     "Auto",
-    "Prompt Builder",
-    "Pose / Body",
-    "Camera / Composition",
-    "Clothing / Appearance",
-    "Location / Scene",
+    "Recommended",
+    "Person",
+    "Scene / Objects",
+    "Style / Quality",
     "NSFW",
-    "All General",
     "All",
     "Off",
 ]
@@ -61,6 +59,27 @@ LOCATION_WORDS = {
     "room", "street", "forest", "beach", "bedroom", "school", "city", "outside",
     "inside",
 }
+OBJECT_EXACT = {
+    "book", "books", "phone", "smartphone", "bag", "backpack", "umbrella", "sword",
+    "weapon", "gun", "knife", "food", "drink", "cup", "glass", "chair", "desk",
+    "table", "bed", "pillow", "flower", "flowers",
+}
+OBJECT_WORDS = {
+    "book", "phone", "bag", "umbrella", "sword", "weapon", "gun", "knife", "food",
+    "drink", "cup", "glass", "chair", "desk", "table", "bed", "pillow", "flower",
+    "holding", "object", "prop",
+}
+STYLE_QUALITY_EXACT = {
+    "masterpiece", "best_quality", "high_quality", "low_quality", "worst_quality",
+    "normal_quality", "highres", "absurdres", "ultra-detailed", "detailed",
+    "anime_style", "realistic", "photorealistic", "sketch", "watercolor",
+    "pixel_art", "monochrome", "greyscale", "grayscale",
+}
+STYLE_QUALITY_WORDS = {
+    "quality", "highres", "absurdres", "detailed", "style", "anime", "realistic",
+    "photorealistic", "sketch", "watercolor", "pixel", "monochrome", "greyscale",
+    "grayscale", "render", "painting",
+}
 NSFW_EXACT = {
     "nude", "completely_nude", "topless", "nipples", "sex", "missionary",
     "cum", "pussy", "penis", "vaginal", "oral", "fellatio", "paizuri",
@@ -73,12 +92,20 @@ SUBJECT_EXACT = {
     "1girl", "1boy", "solo", "multiple_girls", "multiple_boys", "2girls", "2boys",
     "girl", "boy",
 }
-MODE_CLASS = {
-    "Pose / Body": "pose",
-    "Camera / Composition": "camera",
-    "Clothing / Appearance": "appearance",
-    "Location / Scene": "location",
-    "NSFW": "nsfw",
+MODE_CLASSES = {
+    "Person": {"subject", "pose", "appearance"},
+    "Scene / Objects": {"location", "camera", "object"},
+    "Style / Quality": {"style"},
+    "NSFW": {"nsfw"},
+}
+MODE_CLASS = {mode: next(iter(classes)) for mode, classes in MODE_CLASSES.items()}
+LEGACY_RELATED_MODE_MAP = {
+    "Prompt Builder": "Recommended",
+    "All General": "Recommended",
+    "Pose / Body": "Person",
+    "Clothing / Appearance": "Person",
+    "Camera / Composition": "Scene / Objects",
+    "Location / Scene": "Scene / Objects",
 }
 
 
@@ -127,6 +154,8 @@ def related_tag_class(tag: str):
     key = normalize_tag(tag)
     if tag_has_any(key, NSFW_EXACT, NSFW_WORDS):
         return "nsfw"
+    if tag_has_any(key, STYLE_QUALITY_EXACT, STYLE_QUALITY_WORDS):
+        return "style"
     if key in LOCATION_EXACT:
         return "location"
     if tag_has_any(key, POSE_EXACT, POSE_WORDS):
@@ -137,6 +166,8 @@ def related_tag_class(tag: str):
         return "appearance"
     if tag_has_any(key, set(), LOCATION_WORDS):
         return "location"
+    if tag_has_any(key, OBJECT_EXACT, OBJECT_WORDS):
+        return "object"
     if key in SUBJECT_EXACT:
         return "subject"
     return "general"
@@ -144,6 +175,7 @@ def related_tag_class(tag: str):
 
 def normalize_related_mode(mode):
     mode = (mode or "Auto").strip()
+    mode = LEGACY_RELATED_MODE_MAP.get(mode, mode)
     return mode if mode in RELATED_MODES else "Auto"
 
 
@@ -151,15 +183,13 @@ def infer_related_mode(tag: str):
     tag_class = related_tag_class(tag)
     if tag_class == "nsfw":
         return "NSFW"
-    if tag_class == "location":
-        return "Location / Scene"
-    if tag_class == "pose":
-        return "Pose / Body"
-    if tag_class == "camera":
-        return "Camera / Composition"
-    if tag_class == "appearance":
-        return "Clothing / Appearance"
-    return "Prompt Builder"
+    if tag_class in {"subject", "pose", "appearance"}:
+        return "Person"
+    if tag_class in {"location", "camera", "object"}:
+        return "Scene / Objects"
+    if tag_class == "style":
+        return "Style / Quality"
+    return "Recommended"
 
 
 def tag_boundary_match(query: str, tag: str):
@@ -527,13 +557,16 @@ class JPTAIndex:
 
         categories = self.load_tag_categories()
         general_items = [item for item in items if categories.get(item["tag"]) == 0]
-        if mode in {"Prompt Builder", "All General"}:
+        if mode == "Recommended":
             return general_items
 
-        target_class = MODE_CLASS.get(mode)
-        if not target_class:
+        target_classes = MODE_CLASSES.get(mode)
+        if not target_classes:
             return general_items
-        return [item for item in general_items if related_tag_class(item["tag"]) == target_class]
+        mode_items = general_items
+        if mode == "Style / Quality":
+            mode_items = [item for item in items if categories.get(item["tag"]) in {0, 5}]
+        return [item for item in mode_items if related_tag_class(item["tag"]) in target_classes]
 
     def related(self, tag, limit=24, related_mode=None):
         key = normalize_tag(tag)
