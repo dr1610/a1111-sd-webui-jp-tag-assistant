@@ -158,6 +158,10 @@ def tag_has_any(tag: str, exact, words):
     return key in exact or bool(tag_words(key) & words)
 
 
+def is_licensed_category(category):
+    return category in {3, 4}
+
+
 def tag_classes(tag: str):
     key = normalize_tag(tag)
     classes = set()
@@ -528,7 +532,7 @@ class JPTAIndex:
                 best_term = term
         return best_score, best_term
 
-    def search(self, query, limit=40):
+    def search(self, query, limit=40, exclude_licensed=False):
         q = normalize_ja(query)
         if not q:
             return []
@@ -565,6 +569,14 @@ class JPTAIndex:
                     previous = results.get(tag)
                     if previous is None or item["score"] > previous["score"]:
                         results[tag] = item
+
+        if exclude_licensed:
+            categories = self.load_tag_categories()
+            results = {
+                tag: item
+                for tag, item in results.items()
+                if not is_licensed_category(categories.get(tag))
+            }
 
         return sorted(
             results.values(),

@@ -120,6 +120,22 @@
         color: var(--button-secondary-text-color, #f9fafb);
         cursor: pointer;
     }
+    .jpta-exclude-licensed {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 30px;
+        color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .jpta-exclude-licensed input {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+    }
     .jpta-section-title {
         display: flex;
         align-items: center;
@@ -327,6 +343,7 @@
             relatedMode: "Auto",
             relatedModeLanguage: "Japanese",
             relatedModes: ["Auto", "Recommended", "Person", "Scene / Objects", "Style / Quality", "NSFW", "All", "Off"],
+            excludeLicensedDefault: true,
         };
     }
 
@@ -524,6 +541,10 @@
             <div class="jpta-top">
                 <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="日本語でタグ検索..." />
                 <button class="jpta-search" type="button">Search</button>
+                <label class="jpta-exclude-licensed" title="Exclude copyright and character candidates">
+                    <input class="jpta-exclude-licensed-input" type="checkbox" />
+                    <span>版権/キャラ除外</span>
+                </label>
                 <div class="jpta-related-mode-wrap">
                     <button class="jpta-related-mode" type="button" title="Related tag mode" aria-haspopup="listbox" aria-expanded="false"></button>
                     <div class="jpta-related-mode-menu" role="listbox"></div>
@@ -538,6 +559,8 @@
 
         const input = panel.querySelector(".jpta-input");
         const search = panel.querySelector(".jpta-search");
+        const excludeLicensed = panel.querySelector(".jpta-exclude-licensed-input");
+        excludeLicensed.checked = state.config?.excludeLicensedDefault !== false;
         const modeWrap = panel.querySelector(".jpta-related-mode-wrap");
         const modeButton = panel.querySelector(".jpta-related-mode");
         const modeMenu = panel.querySelector(".jpta-related-mode-menu");
@@ -575,6 +598,7 @@
             if (panel.open) input.focus();
         });
         search.addEventListener("click", () => runSearch(tab, panel));
+        excludeLicensed.addEventListener("change", () => runSearch(tab, panel));
         input.addEventListener("keydown", (event) => {
             const items = state.candidates[tab] || [];
             if ((event.key === "ArrowDown" || event.key === "ArrowUp") && items.length) {
@@ -665,7 +689,8 @@
             return;
         }
         const limit = state.config.maxResults || 32;
-        const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+        const excludeLicensed = panel.querySelector(".jpta-exclude-licensed-input")?.checked ? "true" : "false";
+        const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}&exclude_licensed=${excludeLicensed}`);
         renderItems(results, tab, data?.results || [], { kind: "candidates" });
     }
 

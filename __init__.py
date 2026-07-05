@@ -45,6 +45,7 @@ class JPTagAssistantSearch:
                 "related_for": ("STRING", {"default": "", "multiline": False}),
                 "related_mode": (RELATED_MODES, {"default": "Auto"}),
                 "use_machine_labels": ("BOOLEAN", {"default": True}),
+                "exclude_licensed": ("BOOLEAN", {"default": True}),
                 "insert_spaces": ("BOOLEAN", {"default": False}),
             }
         }
@@ -62,10 +63,11 @@ class JPTagAssistantSearch:
         related_for,
         related_mode,
         use_machine_labels,
+        exclude_licensed,
         insert_spaces,
     ):
         index = get_index(use_machine_labels, related_mode)
-        candidates = index.search(query, limit)
+        candidates = index.search(query, limit, exclude_licensed)
         tags = [visible_tag(item["tag"]) if insert_spaces else item["tag"] for item in candidates]
 
         related_key = related_for.strip() or (candidates[0]["tag"] if candidates else "")

@@ -18,7 +18,7 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 
 sys.path.insert(0, str(EXT_PATH))
-from jpta_core import MODE_CLASSES, RELATED_MODES, infer_related_mode, normalize_related_mode, related_mode_priority, tag_matches_related_mode
+from jpta_core import MODE_CLASSES, RELATED_MODES, infer_related_mode, is_licensed_category, normalize_related_mode, related_mode_priority, tag_matches_related_mode
 
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
 TAG_CATEGORY_CACHE = {"mtime": None, "data": {}}
@@ -415,7 +415,7 @@ def score_english_tag_query(query: str, tag: str, aliases=None):
     return best_score, best_term
 
 
-def search_tags(query, limit=40):
+def search_tags(query, limit=40, exclude_licensed=False):
     q = normalize_ja(query)
     if not q:
         return []
@@ -452,6 +452,14 @@ def search_tags(query, limit=40):
                 previous = results.get(tag)
                 if previous is None or item["score"] > previous["score"]:
                     results[tag] = item
+
+    if exclude_licensed:
+        categories = load_tag_categories()
+        results = {
+            tag: item
+            for tag, item in results.items()
+            if not is_licensed_category(categories.get(tag))
+        }
 
     return sorted(
         results.values(),
@@ -518,6 +526,10 @@ def on_ui_settings():
         shared.OptionInfo("Japanese", "Related mode display language", gr.Dropdown, {"choices": ["Japanese", "English"]}, section=JPTA_SECTION),
     )
     shared.opts.add_option(
+        "jpta_excludeLicensedDefault",
+        shared.OptionInfo(True, "Exclude copyright/character candidates by default", section=JPTA_SECTION),
+    )
+    shared.opts.add_option(
         "jpta_useMachineJapaneseLabels",
         shared.OptionInfo(True, "Use machine-translated Japanese labels", section=JPTA_SECTION),
     )
@@ -537,11 +549,12 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
             "relatedMode": normalize_related_mode(getattr(shared.opts, "jpta_relatedMode", "Auto")),
             "relatedModeLanguage": getattr(shared.opts, "jpta_relatedModeLanguage", "Japanese"),
             "relatedModes": RELATED_MODES,
+            "excludeLicensedDefault": bool(getattr(shared.opts, "jpta_excludeLicensedDefault", True)),
         }
 
     @app.get("/jptagapi/v1/search")
-    async def search(q: str = "", limit: int = 32):
-        return {"query": q, "results": search_tags(q, limit)}
+    async def search(q: str = "", limit: int = 32, exclude_licensed: bool = False):
+        return {"query": q, "results": search_tags(q, limit, exclude_licensed)}
 
     @app.get("/jptagapi/v1/related")
     async def related(tag: str, limit: int = 24, mode: str = ""):

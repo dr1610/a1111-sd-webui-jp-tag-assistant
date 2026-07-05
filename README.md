@@ -84,6 +84,7 @@ Settings are available under `JP Tag Assistant`.
 - `Maximum related tags`
 - `Related tag mode default`
 - `Related mode display language`
+- `Exclude copyright/character candidates by default`
 - `Use machine-translated Japanese labels`
 - `Maximum cached relations per tag`
 
