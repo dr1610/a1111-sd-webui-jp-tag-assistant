@@ -6,6 +6,7 @@
         inserted: {},
         candidates: {},
         candidateIndex: {},
+        relatedMode: {},
         outsideClickAttached: false,
     };
 
@@ -106,8 +107,22 @@
         cursor: pointer;
     }
     .jpta-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
         margin: 5px 0 4px;
         color: var(--body-text-color-subdued, #9ca3af);
+        font-size: 12px;
+    }
+    .jpta-related-mode {
+        flex: 0 0 auto;
+        max-width: 180px;
+        height: 24px;
+        border: 1px solid var(--input-border-color, #4b5563);
+        border-radius: 5px;
+        background: #1f2937 !important;
+        color: var(--input-text-color, #f9fafb) !important;
         font-size: 12px;
     }
     .jpta-list {
@@ -202,6 +217,8 @@
             enable: true,
             maxResults: 32,
             relatedMaxResults: 24,
+            relatedMode: "Auto",
+            relatedModes: ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"],
         };
     }
 
@@ -329,6 +346,15 @@
         loadRelated(tab, item.tag);
     }
 
+    function relatedModeOptions() {
+        return state.config?.relatedModes || ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"];
+    }
+
+    function selectedRelatedMode(tab, panel) {
+        const select = panel?.querySelector(".jpta-related-mode");
+        return select?.value || state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+    }
+
     function createPanel(tab) {
         const panel = document.createElement("details");
         panel.className = "jpta-panel";
@@ -342,13 +368,26 @@
             </div>
             <div class="jpta-section-title">Candidates</div>
             <div class="jpta-list jpta-results"></div>
-            <div class="jpta-section-title">Related</div>
+            <div class="jpta-section-title"><span>Related</span><select class="jpta-related-mode" title="Related tag mode"></select></div>
             <div class="jpta-list jpta-related"></div>
             </div>
         `;
 
         const input = panel.querySelector(".jpta-input");
         const search = panel.querySelector(".jpta-search");
+        const modeSelect = panel.querySelector(".jpta-related-mode");
+        relatedModeOptions().forEach((mode) => {
+            const option = document.createElement("option");
+            option.value = mode;
+            option.textContent = mode;
+            modeSelect.appendChild(option);
+        });
+        modeSelect.value = state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+        state.relatedMode[tab] = modeSelect.value;
+        modeSelect.addEventListener("change", () => {
+            state.relatedMode[tab] = modeSelect.value;
+            if (state.selected[tab]) loadRelated(tab, state.selected[tab]);
+        });
         panel.addEventListener("toggle", () => {
             if (panel.open) input.focus();
         });
@@ -451,8 +490,13 @@
         const panel = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
         const related = panel?.querySelector(".jpta-related");
         if (!related) return;
+        const mode = selectedRelatedMode(tab, panel);
+        if (mode === "Off") {
+            renderItems(related, tab, []);
+            return;
+        }
         const limit = state.config.relatedMaxResults || 24;
-        const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}`);
+        const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}&mode=${encodeURIComponent(mode)}`);
         renderItems(related, tab, data?.results || []);
     }
 

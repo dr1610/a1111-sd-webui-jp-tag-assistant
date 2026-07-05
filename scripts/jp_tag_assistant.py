@@ -1,6 +1,7 @@
 import csv
 import gzip
 import shutil
+import sys
 from pathlib import Path
 
 import gradio as gr
@@ -15,6 +16,9 @@ TAGS_PATH = EXT_PATH.joinpath("tags")
 DANBOORU_TAGS_FILE = "danbooru_tags.csv"
 DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
+
+sys.path.insert(0, str(EXT_PATH))
+from jpta_core import MODE_CLASS, RELATED_MODES, infer_related_mode, normalize_related_mode, related_tag_class
 
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
 TAG_CATEGORY_CACHE = {"mtime": None, "data": {}}
@@ -467,12 +471,24 @@ def attach_labels(items):
     return items
 
 
-def filter_related_items(items):
-    if not bool(getattr(shared.opts, "jpta_relatedGeneralOnly", True)):
+def filter_related_items(items, selected_tag="", related_mode=None):
+    mode = normalize_related_mode(related_mode or getattr(shared.opts, "jpta_relatedMode", "Auto"))
+    if mode == "Auto":
+        mode = infer_related_mode(selected_tag)
+    if mode == "Off":
+        return []
+    if mode == "All":
         return items
 
     categories = load_tag_categories()
-    return [item for item in items if categories.get(item["tag"]) == 0]
+    general_items = [item for item in items if categories.get(item["tag"]) == 0]
+    if mode in {"Prompt Builder", "All General"}:
+        return general_items
+
+    target_class = MODE_CLASS.get(mode)
+    if not target_class:
+        return general_items
+    return [item for item in general_items if related_tag_class(item["tag"]) == target_class]
 
 
 def on_ui_settings():
@@ -489,8 +505,8 @@ def on_ui_settings():
         shared.OptionInfo(24, "Maximum related tags", gr.Slider, {"minimum": 4, "maximum": 80, "step": 1}, section=JPTA_SECTION),
     )
     shared.opts.add_option(
-        "jpta_relatedGeneralOnly",
-        shared.OptionInfo(True, "Show only general related tags", section=JPTA_SECTION),
+        "jpta_relatedMode",
+        shared.OptionInfo("Auto", "Related tag mode default", gr.Dropdown, {"choices": RELATED_MODES}, section=JPTA_SECTION),
     )
     shared.opts.add_option(
         "jpta_useMachineJapaneseLabels",
@@ -509,7 +525,8 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
             "enable": bool(getattr(shared.opts, "jpta_enable", True)),
             "maxResults": int(getattr(shared.opts, "jpta_maxResults", 32)),
             "relatedMaxResults": int(getattr(shared.opts, "jpta_relatedMaxResults", 24)),
-            "relatedGeneralOnly": bool(getattr(shared.opts, "jpta_relatedGeneralOnly", True)),
+            "relatedMode": normalize_related_mode(getattr(shared.opts, "jpta_relatedMode", "Auto")),
+            "relatedModes": RELATED_MODES,
         }
 
     @app.get("/jptagapi/v1/search")
@@ -517,12 +534,14 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
         return {"query": q, "results": search_tags(q, limit)}
 
     @app.get("/jptagapi/v1/related")
-    async def related(tag: str, limit: int = 24):
+    async def related(tag: str, limit: int = 24, mode: str = ""):
         key = normalize_tag(tag)
         if not key:
             return {"tag": tag, "results": []}
+        if normalize_related_mode(mode or getattr(shared.opts, "jpta_relatedMode", "Auto")) == "Off":
+            return {"tag": key, "results": []}
         relations = load_relations()
-        items = filter_related_items(relations.get(key, []))[: max(0, min(int(limit), 100))]
+        items = filter_related_items(relations.get(key, []), key, mode)[: max(0, min(int(limit), 100))]
         return {"tag": key, "results": attach_labels(items)}
 
     @app.post("/jptagapi/v1/reload")

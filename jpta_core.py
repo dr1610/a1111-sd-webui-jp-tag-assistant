@@ -6,6 +6,80 @@ from pathlib import Path
 DANBOORU_TAGS_FILE = "danbooru_tags.csv"
 DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
+RELATED_MODES = [
+    "Auto",
+    "Prompt Builder",
+    "Pose / Body",
+    "Camera / Composition",
+    "Clothing / Appearance",
+    "Location / Scene",
+    "NSFW",
+    "All General",
+    "All",
+    "Off",
+]
+
+POSE_EXACT = {
+    "standing", "sitting", "kneeling", "on_one_knee", "squatting", "lying", "on_back",
+    "on_stomach", "all_fours", "seiza", "spread_legs", "crossed_legs", "arms_up",
+    "arm_up", "crossed_arms", "outstretched_arms", "arms_behind_back",
+    "arms_behind_head", "hands_up", "hand_on_hip", "interlocked_fingers",
+    "hugging_own_legs",
+}
+POSE_WORDS = {
+    "pose", "standing", "sitting", "kneeling", "squatting", "lying", "crouching",
+    "walking", "running", "jumping", "arms", "arm", "hands", "hand", "legs",
+    "leg", "feet", "foot", "knees", "knee", "fingers",
+}
+CAMERA_EXACT = {
+    "from_below", "from_above", "from_side", "from_behind", "profile", "full_body",
+    "upper_body", "cowboy_shot", "portrait", "close-up", "looking_at_viewer",
+}
+CAMERA_WORDS = {
+    "view", "from", "angle", "perspective", "shot", "focus", "closeup", "close-up",
+    "profile", "portrait", "body", "looking",
+}
+APPEARANCE_EXACT = {
+    "school_uniform", "serafuku", "shirt", "white_shirt", "skirt", "miniskirt",
+    "dress", "white_dress", "swimsuit", "bikini", "underwear", "panties",
+    "thighhighs", "socks", "gloves", "boots", "shoes", "hat", "ribbon",
+    "hair_ornament", "collar", "choker", "long_hair", "short_hair", "smile",
+    "blush", "open_mouth", "closed_mouth", "one_eye_closed",
+}
+APPEARANCE_WORDS = {
+    "hair", "eyes", "eye", "smile", "blush", "mouth", "tears", "sweat", "shirt",
+    "skirt", "dress", "uniform", "serafuku", "swimsuit", "bikini", "underwear",
+    "panties", "thighhighs", "socks", "gloves", "boots", "shoes", "hat", "ribbon",
+    "collar", "choker", "breasts", "ass", "navel", "stomach",
+}
+LOCATION_EXACT = {
+    "outdoors", "indoors", "sky", "blue_sky", "ocean", "water", "night", "day",
+    "simple_background", "white_background", "black_background", "transparent_background",
+}
+LOCATION_WORDS = {
+    "background", "outdoors", "indoors", "sky", "ocean", "water", "night", "day",
+    "room", "street", "forest", "beach", "bedroom", "school", "city", "outside",
+    "inside",
+}
+NSFW_EXACT = {
+    "nude", "completely_nude", "topless", "nipples", "sex", "missionary",
+    "cum", "pussy", "penis", "vaginal", "oral", "fellatio", "paizuri",
+}
+NSFW_WORDS = {
+    "nude", "naked", "sex", "nsfw", "nipples", "pussy", "penis", "cum", "vaginal",
+    "oral", "fellatio", "breast_grab", "ass_grab", "missionary",
+}
+SUBJECT_EXACT = {
+    "1girl", "1boy", "solo", "multiple_girls", "multiple_boys", "2girls", "2boys",
+    "girl", "boy",
+}
+MODE_CLASS = {
+    "Pose / Body": "pose",
+    "Camera / Composition": "camera",
+    "Clothing / Appearance": "appearance",
+    "Location / Scene": "location",
+    "NSFW": "nsfw",
+}
 
 
 def valid_file(path: Path):
@@ -40,6 +114,54 @@ def compact_key(text: str):
     return "".join(char for char in normalize_tag(text) if char.isalnum())
 
 
+def tag_words(tag: str):
+    return set(normalize_tag(tag).replace("-", "_").split("_"))
+
+
+def tag_has_any(tag: str, exact, words):
+    key = normalize_tag(tag)
+    return key in exact or bool(tag_words(key) & words)
+
+
+def related_tag_class(tag: str):
+    key = normalize_tag(tag)
+    if tag_has_any(key, NSFW_EXACT, NSFW_WORDS):
+        return "nsfw"
+    if key in LOCATION_EXACT:
+        return "location"
+    if tag_has_any(key, POSE_EXACT, POSE_WORDS):
+        return "pose"
+    if tag_has_any(key, CAMERA_EXACT, CAMERA_WORDS):
+        return "camera"
+    if tag_has_any(key, APPEARANCE_EXACT, APPEARANCE_WORDS):
+        return "appearance"
+    if tag_has_any(key, set(), LOCATION_WORDS):
+        return "location"
+    if key in SUBJECT_EXACT:
+        return "subject"
+    return "general"
+
+
+def normalize_related_mode(mode):
+    mode = (mode or "Auto").strip()
+    return mode if mode in RELATED_MODES else "Auto"
+
+
+def infer_related_mode(tag: str):
+    tag_class = related_tag_class(tag)
+    if tag_class == "nsfw":
+        return "NSFW"
+    if tag_class == "location":
+        return "Location / Scene"
+    if tag_class == "pose":
+        return "Pose / Body"
+    if tag_class == "camera":
+        return "Camera / Composition"
+    if tag_class == "appearance":
+        return "Clothing / Appearance"
+    return "Prompt Builder"
+
+
 def tag_boundary_match(query: str, tag: str):
     if query == tag:
         return True
@@ -47,11 +169,19 @@ def tag_boundary_match(query: str, tag: str):
 
 
 class JPTAIndex:
-    def __init__(self, tags_path: Path, use_machine_labels=True, related_general_only=True, relation_limit=500):
+    def __init__(
+        self,
+        tags_path: Path,
+        use_machine_labels=True,
+        related_general_only=True,
+        relation_limit=500,
+        related_mode="Auto",
+    ):
         self.tags_path = Path(tags_path)
         self.use_machine_labels = bool(use_machine_labels)
         self.related_general_only = bool(related_general_only)
         self.relation_limit = int(relation_limit)
+        self.related_mode = normalize_related_mode(related_mode)
         self._counts = None
         self._categories = None
         self._aliases = None
@@ -386,21 +516,36 @@ class JPTAIndex:
             item["count"] = item.get("count") or counts.get(tag, 0)
         return items
 
-    def filter_related_items(self, items):
-        if not self.related_general_only:
+    def filter_related_items(self, items, selected_tag="", related_mode=None):
+        mode = normalize_related_mode(related_mode or self.related_mode)
+        if mode == "Auto":
+            mode = infer_related_mode(selected_tag)
+        if mode == "Off":
+            return []
+        if mode == "All":
             return items
-        categories = self.load_tag_categories()
-        return [item for item in items if categories.get(item["tag"]) == 0]
 
-    def related(self, tag, limit=24):
+        categories = self.load_tag_categories()
+        general_items = [item for item in items if categories.get(item["tag"]) == 0]
+        if mode in {"Prompt Builder", "All General"}:
+            return general_items
+
+        target_class = MODE_CLASS.get(mode)
+        if not target_class:
+            return general_items
+        return [item for item in general_items if related_tag_class(item["tag"]) == target_class]
+
+    def related(self, tag, limit=24, related_mode=None):
         key = normalize_tag(tag)
         if not key:
+            return []
+        if normalize_related_mode(related_mode or self.related_mode) == "Off":
             return []
         if self._relations is None:
             items = self.load_related_for_tag(key)
         else:
             items = self.load_relations().get(key, [])
-        items = self.filter_related_items(items)
+        items = self.filter_related_items(items, key, related_mode)
         return self.attach_labels(items[: max(0, min(int(limit), 100))])
 
     def load_related_for_tag(self, key):
