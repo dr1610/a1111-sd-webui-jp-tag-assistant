@@ -12,6 +12,7 @@ Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / A
 - Ambiguous-word expansion, e.g. `腕` shows `arms`, `bare arms`, `arms up`, `crossed arms`
 - Related tag suggestions from Danbooru cooccurrence data
 - Related tag modes such as Auto, Prompt Builder, Pose / Body, Location / Scene, NSFW, Off, and All
+- Related back/forward navigation while exploring suggestions
 - Click to insert/remove the tag in prompt
 - Shift+click to insert/remove the tag in negative prompt
 - User dictionary support

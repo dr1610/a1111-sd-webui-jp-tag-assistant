@@ -7,6 +7,8 @@
         candidates: {},
         candidateIndex: {},
         relatedMode: {},
+        relatedHistory: {},
+        relatedHistoryIndex: {},
         outsideClickAttached: false,
     };
 
@@ -121,6 +123,10 @@
         cursor: pointer;
     }
     .jpta-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
         margin: 5px 0 4px;
         color: var(--body-text-color-subdued, #9ca3af);
         font-size: 12px;
@@ -129,15 +135,17 @@
         flex: 0 0 128px;
         min-width: 116px;
         max-width: 144px;
-        height: 34px;
-        padding: 4px 26px 4px 8px;
+        height: 30px;
+        min-height: 30px;
+        padding: 0 24px 0 8px;
         box-sizing: border-box;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
         background: #1f2937 !important;
         color: var(--input-text-color, #f9fafb) !important;
         font-size: 12px;
-        line-height: 20px;
+        line-height: 28px;
+        vertical-align: middle;
     }
     .jpta-related-mode.en {
         flex-basis: 180px;
@@ -147,6 +155,25 @@
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
+    }
+    .jpta-related-nav {
+        display: inline-flex;
+        gap: 4px;
+    }
+    .jpta-related-nav button {
+        width: 24px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border-radius: 5px;
+        background: #1f2937;
+        color: var(--button-secondary-text-color, #f9fafb);
+        cursor: pointer;
+        line-height: 18px;
+    }
+    .jpta-related-nav button:disabled {
+        cursor: default;
+        opacity: 0.38;
     }
     .jpta-item {
         display: inline-flex;
@@ -379,6 +406,38 @@
         return select?.value || state.relatedMode[tab] || state.config?.relatedMode || "Auto";
     }
 
+    function updateRelatedNav(tab, panel) {
+        const history = state.relatedHistory[tab] || [];
+        const index = state.relatedHistoryIndex[tab] ?? -1;
+        const back = panel?.querySelector(".jpta-related-back");
+        const forward = panel?.querySelector(".jpta-related-forward");
+        if (back) back.disabled = index <= 0;
+        if (forward) forward.disabled = index < 0 || index >= history.length - 1;
+    }
+
+    function recordRelatedHistory(tab, tag) {
+        if (!tag) return;
+        state.relatedHistory[tab] ||= [];
+        const history = state.relatedHistory[tab];
+        const index = state.relatedHistoryIndex[tab] ?? -1;
+        if (history[index] === tag) return;
+        history.splice(index + 1);
+        history.push(tag);
+        state.relatedHistoryIndex[tab] = history.length - 1;
+    }
+
+    function moveRelatedHistory(tab, step) {
+        const panel = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
+        const history = state.relatedHistory[tab] || [];
+        const index = state.relatedHistoryIndex[tab] ?? -1;
+        const nextIndex = index + step;
+        if (nextIndex < 0 || nextIndex >= history.length) return;
+        state.relatedHistoryIndex[tab] = nextIndex;
+        state.selected[tab] = history[nextIndex];
+        updateRelatedNav(tab, panel);
+        loadRelated(tab, history[nextIndex], false);
+    }
+
     function createPanel(tab) {
         const panel = document.createElement("details");
         panel.className = "jpta-panel";
@@ -393,7 +452,7 @@
             </div>
             <div class="jpta-section-title">Candidates</div>
             <div class="jpta-list jpta-results"></div>
-            <div class="jpta-section-title">Related</div>
+            <div class="jpta-section-title"><span>Related</span><span class="jpta-related-nav"><button class="jpta-related-back" type="button" title="Related back">&lt;</button><button class="jpta-related-forward" type="button" title="Related forward">&gt;</button></span></div>
             <div class="jpta-list jpta-related"></div>
             </div>
         `;
@@ -412,8 +471,11 @@
         state.relatedMode[tab] = modeSelect.value;
         modeSelect.addEventListener("change", () => {
             state.relatedMode[tab] = modeSelect.value;
-            if (state.selected[tab]) loadRelated(tab, state.selected[tab]);
+            if (state.selected[tab]) loadRelated(tab, state.selected[tab], false);
         });
+        panel.querySelector(".jpta-related-back").addEventListener("click", () => moveRelatedHistory(tab, -1));
+        panel.querySelector(".jpta-related-forward").addEventListener("click", () => moveRelatedHistory(tab, 1));
+        updateRelatedNav(tab, panel);
         panel.addEventListener("toggle", () => {
             if (panel.open) input.focus();
         });
@@ -512,18 +574,22 @@
         renderItems(results, tab, data?.results || [], { kind: "candidates" });
     }
 
-    async function loadRelated(tab, tag) {
+    async function loadRelated(tab, tag, recordHistory = true) {
         const panel = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
         const related = panel?.querySelector(".jpta-related");
         if (!related) return;
+        if (recordHistory) recordRelatedHistory(tab, tag);
+        updateRelatedNav(tab, panel);
         const mode = selectedRelatedMode(tab, panel);
         if (mode === "Off") {
             renderItems(related, tab, []);
+            updateRelatedNav(tab, panel);
             return;
         }
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}&mode=${encodeURIComponent(mode)}`);
         renderItems(related, tab, data?.results || []);
+        updateRelatedNav(tab, panel);
     }
 
     function attachTab(tab) {
