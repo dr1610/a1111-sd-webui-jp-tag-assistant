@@ -131,13 +131,21 @@
         color: var(--body-text-color-subdued, #9ca3af);
         font-size: 12px;
     }
-    .jpta-related-mode {
+    .jpta-related-mode-wrap {
         flex: 0 0 128px;
         min-width: 116px;
         max-width: 144px;
+        position: relative;
+    }
+    .jpta-related-mode-wrap.en {
+        flex-basis: 180px;
+        max-width: 200px;
+    }
+    .jpta-related-mode {
+        width: 100%;
         height: 30px;
         min-height: 30px;
-        padding: 0 24px 0 8px;
+        padding: 0 22px 0 8px;
         box-sizing: border-box;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
@@ -145,11 +153,64 @@
         color: var(--input-text-color, #f9fafb) !important;
         font-size: 12px;
         line-height: 28px;
-        vertical-align: middle;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        position: relative;
     }
-    .jpta-related-mode.en {
-        flex-basis: 180px;
-        max-width: 200px;
+    .jpta-related-mode::after {
+        content: "";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        width: 0;
+        height: 0;
+        margin-top: -2px;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid currentColor;
+        opacity: 0.75;
+        pointer-events: none;
+    }
+    .jpta-related-mode-menu {
+        display: none;
+        position: absolute;
+        z-index: 10030;
+        top: calc(100% + 3px);
+        left: 0;
+        width: max-content;
+        min-width: 100%;
+        max-width: min(260px, calc(100vw - 24px));
+        padding: 3px;
+        border: 1px solid var(--input-border-color, #4b5563);
+        border-radius: 5px;
+        background: #1f2937;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.52);
+    }
+    .jpta-related-mode-wrap.open .jpta-related-mode-menu {
+        display: block;
+    }
+    .jpta-related-mode-item {
+        display: block;
+        width: 100%;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--input-text-color, #f9fafb);
+        font-size: 12px;
+        line-height: 28px;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .jpta-related-mode-item:hover,
+    .jpta-related-mode-item.active {
+        background: var(--button-primary-background-fill, #2563eb);
+        color: var(--button-primary-text-color, #ffffff);
     }
     .jpta-list {
         display: flex;
@@ -237,6 +298,9 @@
         if (state.outsideClickAttached) return;
         state.outsideClickAttached = true;
         document.addEventListener("mousedown", (event) => {
+            appRoot().querySelectorAll(".jpta-related-mode-wrap.open").forEach((wrap) => {
+                if (!wrap.contains(event.target)) wrap.classList.remove("open");
+            });
             const openPanels = [...appRoot().querySelectorAll(".jpta-panel[open]")];
             if (!openPanels.length) return;
             openPanels.forEach((panel) => {
@@ -402,8 +466,22 @@
     }
 
     function selectedRelatedMode(tab, panel) {
-        const select = panel?.querySelector(".jpta-related-mode");
-        return select?.value || state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+        const button = panel?.querySelector(".jpta-related-mode");
+        return button?.dataset.mode || state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+    }
+
+    function updateRelatedModeButton(tab, panel) {
+        const button = panel?.querySelector(".jpta-related-mode");
+        const menu = panel?.querySelector(".jpta-related-mode-menu");
+        if (!button || !menu) return;
+        const mode = state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+        button.dataset.mode = mode;
+        button.textContent = relatedModeLabel(mode);
+        button.title = relatedModeLabel(mode);
+        menu.querySelectorAll(".jpta-related-mode-item").forEach((item) => {
+            item.classList.toggle("active", item.dataset.mode === mode);
+            item.setAttribute("aria-selected", item.dataset.mode === mode ? "true" : "false");
+        });
     }
 
     function updateRelatedNav(tab, panel) {
@@ -448,7 +526,10 @@
             <div class="jpta-top">
                 <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="日本語でタグ検索..." />
                 <button class="jpta-search" type="button">Search</button>
-                <select class="jpta-related-mode" title="Related tag mode"></select>
+                <div class="jpta-related-mode-wrap">
+                    <button class="jpta-related-mode" type="button" title="Related tag mode" aria-haspopup="listbox" aria-expanded="false"></button>
+                    <div class="jpta-related-mode-menu" role="listbox"></div>
+                </div>
             </div>
             <div class="jpta-section-title">Candidates</div>
             <div class="jpta-list jpta-results"></div>
@@ -459,19 +540,35 @@
 
         const input = panel.querySelector(".jpta-input");
         const search = panel.querySelector(".jpta-search");
-        const modeSelect = panel.querySelector(".jpta-related-mode");
-        modeSelect.classList.toggle("en", state.config?.relatedModeLanguage === "English");
+        const modeWrap = panel.querySelector(".jpta-related-mode-wrap");
+        const modeButton = panel.querySelector(".jpta-related-mode");
+        const modeMenu = panel.querySelector(".jpta-related-mode-menu");
+        modeWrap.classList.toggle("en", state.config?.relatedModeLanguage === "English");
         relatedModeOptions().forEach((mode) => {
-            const option = document.createElement("option");
-            option.value = mode;
-            option.textContent = relatedModeLabel(mode);
-            modeSelect.appendChild(option);
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "jpta-related-mode-item";
+            item.dataset.mode = mode;
+            item.textContent = relatedModeLabel(mode);
+            item.setAttribute("role", "option");
+            item.addEventListener("click", () => {
+                state.relatedMode[tab] = mode;
+                modeWrap.classList.remove("open");
+                modeButton.setAttribute("aria-expanded", "false");
+                updateRelatedModeButton(tab, panel);
+                if (state.selected[tab]) loadRelated(tab, state.selected[tab], false);
+            });
+            modeMenu.appendChild(item);
         });
-        modeSelect.value = state.relatedMode[tab] || state.config?.relatedMode || "Auto";
-        state.relatedMode[tab] = modeSelect.value;
-        modeSelect.addEventListener("change", () => {
-            state.relatedMode[tab] = modeSelect.value;
-            if (state.selected[tab]) loadRelated(tab, state.selected[tab], false);
+        state.relatedMode[tab] = state.relatedMode[tab] || state.config?.relatedMode || "Auto";
+        updateRelatedModeButton(tab, panel);
+        modeButton.addEventListener("click", () => {
+            const willOpen = !modeWrap.classList.contains("open");
+            appRoot().querySelectorAll(".jpta-related-mode-wrap.open").forEach((wrap) => {
+                if (wrap !== modeWrap) wrap.classList.remove("open");
+            });
+            modeWrap.classList.toggle("open", willOpen);
+            modeButton.setAttribute("aria-expanded", willOpen ? "true" : "false");
         });
         panel.querySelector(".jpta-related-back").addEventListener("click", () => moveRelatedHistory(tab, -1));
         panel.querySelector(".jpta-related-forward").addEventListener("click", () => moveRelatedHistory(tab, 1));
