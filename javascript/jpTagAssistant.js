@@ -78,6 +78,7 @@
     .jpta-top {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 7px;
     }
@@ -107,18 +108,15 @@
         cursor: pointer;
     }
     .jpta-section-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
         margin: 5px 0 4px;
         color: var(--body-text-color-subdued, #9ca3af);
         font-size: 12px;
     }
     .jpta-related-mode {
-        flex: 0 0 auto;
-        max-width: 180px;
-        height: 24px;
+        flex: 0 0 170px;
+        min-width: 150px;
+        max-width: 190px;
+        height: 30px;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
         background: #1f2937 !important;
@@ -365,10 +363,11 @@
             <div class="jpta-top">
                 <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="日本語でタグ検索..." />
                 <button class="jpta-search" type="button">Search</button>
+                <select class="jpta-related-mode" title="Related tag mode"></select>
             </div>
             <div class="jpta-section-title">Candidates</div>
             <div class="jpta-list jpta-results"></div>
-            <div class="jpta-section-title"><span>Related</span><select class="jpta-related-mode" title="Related tag mode"></select></div>
+            <div class="jpta-section-title">Related</div>
             <div class="jpta-list jpta-related"></div>
             </div>
         `;
