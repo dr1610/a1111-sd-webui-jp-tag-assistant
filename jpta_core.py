@@ -192,6 +192,23 @@ def related_tag_class(tag: str):
     return "general"
 
 
+def tag_matches_related_mode(tag: str, mode: str):
+    classes = tag_classes(tag)
+    mode = normalize_related_mode(mode)
+    target_classes = MODE_CLASSES.get(mode)
+    if not target_classes:
+        return True
+    return bool(classes & target_classes)
+
+
+def related_mode_priority(tag: str, mode: str):
+    classes = tag_classes(tag)
+    mode = normalize_related_mode(mode)
+    if mode == "NSFW":
+        return 0 if "nsfw" in classes else 1
+    return 0
+
+
 def normalize_related_mode(mode):
     mode = (mode or "Auto").strip()
     mode = LEGACY_RELATED_MODE_MAP.get(mode, mode)
@@ -585,7 +602,9 @@ class JPTAIndex:
         mode_items = general_items
         if mode == "Style / Quality":
             mode_items = [item for item in items if categories.get(item["tag"]) in {0, 5}]
-        return [item for item in mode_items if tag_classes(item["tag"]) & target_classes]
+        if mode == "NSFW":
+            return sorted(mode_items, key=lambda item: related_mode_priority(item["tag"], mode))
+        return [item for item in mode_items if tag_matches_related_mode(item["tag"], mode)]
 
     def related(self, tag, limit=24, related_mode=None):
         key = normalize_tag(tag)
