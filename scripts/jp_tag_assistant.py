@@ -509,6 +509,10 @@ def on_ui_settings():
         shared.OptionInfo("Auto", "Related tag mode default", gr.Dropdown, {"choices": RELATED_MODES}, section=JPTA_SECTION),
     )
     shared.opts.add_option(
+        "jpta_relatedModeLanguage",
+        shared.OptionInfo("Japanese", "Related mode display language", gr.Dropdown, {"choices": ["Japanese", "English"]}, section=JPTA_SECTION),
+    )
+    shared.opts.add_option(
         "jpta_useMachineJapaneseLabels",
         shared.OptionInfo(True, "Use machine-translated Japanese labels", section=JPTA_SECTION),
     )
@@ -526,6 +530,7 @@ def api_jp_tag_assistant(_: gr.Blocks, app: FastAPI):
             "maxResults": int(getattr(shared.opts, "jpta_maxResults", 32)),
             "relatedMaxResults": int(getattr(shared.opts, "jpta_relatedMaxResults", 24)),
             "relatedMode": normalize_related_mode(getattr(shared.opts, "jpta_relatedMode", "Auto")),
+            "relatedModeLanguage": getattr(shared.opts, "jpta_relatedModeLanguage", "Japanese"),
             "relatedModes": RELATED_MODES,
         }
 

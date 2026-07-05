@@ -10,6 +10,19 @@
         outsideClickAttached: false,
     };
 
+    const relatedModeLabelsJa = {
+        "Auto": "自動",
+        "Prompt Builder": "プロンプト補助",
+        "Pose / Body": "ポーズ/身体",
+        "Camera / Composition": "構図/カメラ",
+        "Clothing / Appearance": "服装/外見",
+        "Location / Scene": "場所/背景",
+        "NSFW": "NSFW",
+        "All General": "通常タグすべて",
+        "All": "すべて",
+        "Off": "オフ",
+    };
+
     const css = `
     .jpta-panel {
         margin: 8px 0 12px;
@@ -84,7 +97,7 @@
     }
     .jpta-input {
         flex: 1 1 auto;
-        min-width: 120px;
+        min-width: 90px;
         height: 30px;
         padding: 3px 8px;
         border: 1px solid var(--input-border-color, #4b5563);
@@ -113,15 +126,19 @@
         font-size: 12px;
     }
     .jpta-related-mode {
-        flex: 0 0 170px;
-        min-width: 150px;
-        max-width: 190px;
+        flex: 0 0 132px;
+        min-width: 112px;
+        max-width: 150px;
         height: 30px;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
         background: #1f2937 !important;
         color: var(--input-text-color, #f9fafb) !important;
         font-size: 12px;
+    }
+    .jpta-related-mode.en {
+        flex-basis: 180px;
+        max-width: 200px;
     }
     .jpta-list {
         display: flex;
@@ -216,6 +233,7 @@
             maxResults: 32,
             relatedMaxResults: 24,
             relatedMode: "Auto",
+            relatedModeLanguage: "Japanese",
             relatedModes: ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"],
         };
     }
@@ -348,6 +366,11 @@
         return state.config?.relatedModes || ["Auto", "Prompt Builder", "Pose / Body", "Camera / Composition", "Clothing / Appearance", "Location / Scene", "NSFW", "All General", "All", "Off"];
     }
 
+    function relatedModeLabel(mode) {
+        if (state.config?.relatedModeLanguage === "English") return mode;
+        return relatedModeLabelsJa[mode] || mode;
+    }
+
     function selectedRelatedMode(tab, panel) {
         const select = panel?.querySelector(".jpta-related-mode");
         return select?.value || state.relatedMode[tab] || state.config?.relatedMode || "Auto";
@@ -375,10 +398,11 @@
         const input = panel.querySelector(".jpta-input");
         const search = panel.querySelector(".jpta-search");
         const modeSelect = panel.querySelector(".jpta-related-mode");
+        modeSelect.classList.toggle("en", state.config?.relatedModeLanguage === "English");
         relatedModeOptions().forEach((mode) => {
             const option = document.createElement("option");
             option.value = mode;
-            option.textContent = mode;
+            option.textContent = relatedModeLabel(mode);
             modeSelect.appendChild(option);
         });
         modeSelect.value = state.relatedMode[tab] || state.config?.relatedMode || "Auto";

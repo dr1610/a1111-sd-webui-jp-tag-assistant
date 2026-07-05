@@ -82,7 +82,8 @@ Settings are available under `JP Tag Assistant`.
 - `Maximum search results`
 - `Maximum related tags`
 - `Related tag mode default`
+- `Related mode display language`
 - `Use machine-translated Japanese labels`
 - `Maximum cached relations per tag`
 
-`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `outdoors` uses Location / Scene, `kneeling` uses Pose / Body, `missionary` uses NSFW, and broad subject tags such as `1girl` use Prompt Builder. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off.
+`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `outdoors` uses Location / Scene, `kneeling` uses Pose / Body, `missionary` uses NSFW, and broad subject tags such as `1girl` use Prompt Builder. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. The Related dropdown is shown in Japanese by default; set `Related mode display language` to English if you prefer the English labels.
