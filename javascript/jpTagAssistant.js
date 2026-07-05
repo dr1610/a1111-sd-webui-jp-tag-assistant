@@ -126,15 +126,18 @@
         font-size: 12px;
     }
     .jpta-related-mode {
-        flex: 0 0 132px;
-        min-width: 112px;
-        max-width: 150px;
-        height: 30px;
+        flex: 0 0 128px;
+        min-width: 116px;
+        max-width: 144px;
+        height: 34px;
+        padding: 4px 26px 4px 8px;
+        box-sizing: border-box;
         border: 1px solid var(--input-border-color, #4b5563);
         border-radius: 5px;
         background: #1f2937 !important;
         color: var(--input-text-color, #f9fafb) !important;
         font-size: 12px;
+        line-height: 20px;
     }
     .jpta-related-mode.en {
         flex-basis: 180px;
