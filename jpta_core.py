@@ -88,6 +88,14 @@ NSFW_WORDS = {
     "nude", "naked", "sex", "nsfw", "nipples", "pussy", "penis", "cum", "vaginal",
     "oral", "fellatio", "breast_grab", "ass_grab", "missionary",
 }
+SEXUAL_PERSON_EXACT = {
+    "nipples", "pussy", "penis", "vaginal", "vagina", "cum_in_mouth", "oral",
+    "fellatio", "paizuri", "breast_grab", "ass_grab", "missionary",
+}
+SEXUAL_PERSON_WORDS = {
+    "nipples", "pussy", "penis", "vaginal", "vagina", "mouth", "oral",
+    "fellatio", "paizuri", "breast", "ass", "missionary",
+}
 SUBJECT_EXACT = {
     "1girl", "1boy", "solo", "multiple_girls", "multiple_boys", "2girls", "2boys",
     "girl", "boy",
@@ -150,26 +158,37 @@ def tag_has_any(tag: str, exact, words):
     return key in exact or bool(tag_words(key) & words)
 
 
-def related_tag_class(tag: str):
+def tag_classes(tag: str):
     key = normalize_tag(tag)
+    classes = set()
     if tag_has_any(key, NSFW_EXACT, NSFW_WORDS):
-        return "nsfw"
+        classes.add("nsfw")
     if tag_has_any(key, STYLE_QUALITY_EXACT, STYLE_QUALITY_WORDS):
-        return "style"
+        classes.add("style")
     if key in LOCATION_EXACT:
-        return "location"
+        classes.add("location")
     if tag_has_any(key, POSE_EXACT, POSE_WORDS):
-        return "pose"
+        classes.add("pose")
     if tag_has_any(key, CAMERA_EXACT, CAMERA_WORDS):
-        return "camera"
+        classes.add("camera")
     if tag_has_any(key, APPEARANCE_EXACT, APPEARANCE_WORDS):
-        return "appearance"
+        classes.add("appearance")
     if tag_has_any(key, set(), LOCATION_WORDS):
-        return "location"
+        classes.add("location")
     if tag_has_any(key, OBJECT_EXACT, OBJECT_WORDS):
-        return "object"
+        classes.add("object")
     if key in SUBJECT_EXACT:
-        return "subject"
+        classes.add("subject")
+    if tag_has_any(key, SEXUAL_PERSON_EXACT, SEXUAL_PERSON_WORDS):
+        classes.add("appearance")
+    return classes or {"general"}
+
+
+def related_tag_class(tag: str):
+    classes = tag_classes(tag)
+    for class_name in ["nsfw", "style", "location", "pose", "camera", "appearance", "object", "subject"]:
+        if class_name in classes:
+            return class_name
     return "general"
 
 
@@ -566,7 +585,7 @@ class JPTAIndex:
         mode_items = general_items
         if mode == "Style / Quality":
             mode_items = [item for item in items if categories.get(item["tag"]) in {0, 5}]
-        return [item for item in mode_items if related_tag_class(item["tag"]) in target_classes]
+        return [item for item in mode_items if tag_classes(item["tag"]) & target_classes]
 
     def related(self, tag, limit=24, related_mode=None):
         key = normalize_tag(tag)

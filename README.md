@@ -88,3 +88,4 @@ Settings are available under `JP Tag Assistant`.
 - `Maximum cached relations per tag`
 
 `Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `kneeling` and `school_uniform` use Person, `outdoors` and `from_below` use Scene / Objects, `masterpiece` uses Style / Quality, and `missionary` uses NSFW. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. The Related dropdown is shown in Japanese by default; set `Related mode display language` to English if you prefer the English labels.
+Related categories are intentionally non-exclusive: for example, `cum_in_mouth` can be found from both Person and NSFW, while NSFW mode emphasizes adult-oriented tags.

@@ -18,7 +18,7 @@ DANBOORU_COOCCURRENCE_FILE = "danbooru_tags_cooccurrence.csv"
 DANBOORU_COOCCURRENCE_GZ_FILE = f"{DANBOORU_COOCCURRENCE_FILE}.gz"
 
 sys.path.insert(0, str(EXT_PATH))
-from jpta_core import MODE_CLASSES, RELATED_MODES, infer_related_mode, normalize_related_mode, related_tag_class
+from jpta_core import MODE_CLASSES, RELATED_MODES, infer_related_mode, normalize_related_mode, tag_classes
 
 TAG_COUNT_CACHE = {"mtime": None, "data": {}}
 TAG_CATEGORY_CACHE = {"mtime": None, "data": {}}
@@ -491,7 +491,7 @@ def filter_related_items(items, selected_tag="", related_mode=None):
     mode_items = general_items
     if mode == "Style / Quality":
         mode_items = [item for item in items if categories.get(item["tag"]) in {0, 5}]
-    return [item for item in mode_items if related_tag_class(item["tag"]) in target_classes]
+    return [item for item in mode_items if tag_classes(item["tag"]) & target_classes]
 
 
 def on_ui_settings():
