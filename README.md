@@ -45,12 +45,27 @@ The WebUI panel intentionally keeps helper text minimal. This README is the main
 
 This extension is meant to complement tag completion extensions. Use JP Tag Assistant for Japanese concept search such as `膝立ち`, `四つんばい`, `下から`, or `横顔`; use a tag completion extension for broad English Danbooru tag-name completion.
 
+### ReForge / Forge / AUTOMATIC1111
+
 1. Install this folder into `extensions/a1111-sd-webui-jp-tag-assistant`.
 2. Restart WebUI.
 3. Open txt2img or img2img.
 4. Type Japanese in the `JP Tag Assistant` panel.
 5. Click a candidate to insert it into the prompt.
 6. Shift+click to insert it into the negative prompt.
+
+### ComfyUI
+
+This repository can also be installed as a ComfyUI custom node.
+
+1. Install this folder into `ComfyUI/custom_nodes/a1111-sd-webui-jp-tag-assistant`.
+2. Restart ComfyUI.
+3. Add `JP Tag Assistant Search` from the `JP Tag Assistant` node category.
+4. Enter Japanese text in `query`.
+5. Use the `tags` output as a comma-separated prompt fragment, or inspect `candidates` and `related`.
+
+The ComfyUI node does not edit prompt fields directly. It returns strings so it can be connected to prompt-building workflows.
+`related_limit` defaults to `0` because related-tag lookup may need to scan the cooccurrence file on first use. Increase it only when you want related tags in the workflow.
 
 Keyboard shortcuts inside the assistant input:
 
