@@ -25,12 +25,25 @@
 
     const css = `
     .jpta-panel {
+        --jpta-panel-bg: var(--block-background-fill, Canvas);
+        --jpta-body-bg: var(--block-background-fill, var(--background-fill-primary, Canvas));
+        --jpta-control-bg: var(--input-background-fill, Field);
+        --jpta-control-text: var(--input-text-color, var(--body-text-color, FieldText));
+        --jpta-text: var(--body-text-color, CanvasText);
+        --jpta-muted-text: var(--body-text-color-subdued, var(--body-text-color, CanvasText));
+        --jpta-border: var(--block-border-color, var(--border-color-primary, #9ca3af));
+        --jpta-input-border: var(--input-border-color, var(--jpta-border));
+        --jpta-button-bg: var(--button-secondary-background-fill, var(--jpta-control-bg));
+        --jpta-button-text: var(--button-secondary-text-color, var(--jpta-text));
+        --jpta-selected-bg: var(--button-primary-background-fill, Highlight);
+        --jpta-selected-text: var(--button-primary-text-color, HighlightText);
         margin: 8px 0 12px;
         padding: 0;
-        border: 1px solid var(--block-border-color, #4b5563);
+        border: 1px solid var(--jpta-border);
         border-radius: 6px;
-        background: #111827;
-        color: var(--body-text-color, #f3f4f6);
+        background: var(--jpta-panel-bg);
+        color: var(--jpta-text);
+        color-scheme: light dark;
         font: 13px/1.35 sans-serif;
         overflow: visible;
         position: relative;
@@ -52,7 +65,7 @@
         min-height: 30px;
         padding: 6px 8px;
         cursor: pointer;
-        color: var(--body-text-color-subdued, #9ca3af);
+        color: var(--jpta-muted-text);
         font-size: 12px;
         font-weight: 700;
         user-select: none;
@@ -80,10 +93,10 @@
         max-height: min(360px, calc(100vh - 160px));
         overflow: auto;
         padding: 8px;
-        border: 1px solid var(--block-border-color, #4b5563);
+        border: 1px solid var(--jpta-border);
         border-radius: 6px;
-        background: #0b1220;
-        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
+        background: var(--jpta-body-bg);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
     }
     .jpta-panel[open] .jpta-body {
         display: block;
@@ -100,24 +113,24 @@
         min-width: 90px;
         height: 30px;
         padding: 3px 8px;
-        border: 1px solid var(--input-border-color, #4b5563);
+        border: 1px solid var(--jpta-input-border);
         border-radius: 5px;
-        background: #1f2937 !important;
-        color: var(--input-text-color, #f9fafb) !important;
+        background: var(--jpta-control-bg) !important;
+        color: var(--jpta-control-text) !important;
         box-shadow: none;
         outline: none;
     }
     .jpta-input::placeholder {
-        color: var(--input-placeholder-color, #8b95a5);
+        color: var(--input-placeholder-color, var(--jpta-muted-text));
     }
     .jpta-search {
         flex: 0 0 auto;
         height: 30px;
         padding: 3px 10px;
-        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border: 1px solid var(--button-secondary-border-color, var(--jpta-border));
         border-radius: 5px;
-        background: var(--button-secondary-background-fill, #374151);
-        color: var(--button-secondary-text-color, #f9fafb);
+        background: var(--jpta-button-bg);
+        color: var(--jpta-button-text);
         cursor: pointer;
     }
     .jpta-exclude-licensed {
@@ -126,7 +139,7 @@
         align-items: center;
         gap: 5px;
         height: 30px;
-        color: var(--body-text-color-subdued, #9ca3af);
+        color: var(--jpta-muted-text);
         font-size: 12px;
         white-space: nowrap;
         user-select: none;
@@ -140,14 +153,14 @@
         position: relative;
         flex: 0 0 auto;
         box-sizing: border-box;
-        border: 1px solid var(--checkbox-border-color, #9ca3af);
+        border: 1px solid var(--checkbox-border-color, var(--jpta-border));
         border-radius: 3px;
-        background: #111827;
+        background: var(--checkbox-background-color, var(--jpta-control-bg));
         cursor: pointer;
     }
     .jpta-exclude-licensed input:checked {
-        border-color: var(--button-primary-background-fill, #2563eb);
-        background: var(--button-primary-background-fill, #2563eb);
+        border-color: var(--jpta-selected-bg);
+        background: var(--jpta-selected-bg);
     }
     .jpta-exclude-licensed input:checked::after {
         content: "";
@@ -156,7 +169,7 @@
         top: 1px;
         width: 5px;
         height: 8px;
-        border: solid #ffffff;
+        border: solid var(--jpta-selected-text);
         border-width: 0 2px 2px 0;
         transform: rotate(45deg);
     }
@@ -166,7 +179,7 @@
         justify-content: space-between;
         gap: 8px;
         margin: 5px 0 4px;
-        color: var(--body-text-color-subdued, #9ca3af);
+        color: var(--jpta-muted-text);
         font-size: 12px;
     }
     .jpta-related-mode-wrap {
@@ -185,10 +198,10 @@
         min-height: 30px;
         padding: 0 22px 0 8px;
         box-sizing: border-box;
-        border: 1px solid var(--input-border-color, #4b5563);
+        border: 1px solid var(--jpta-input-border);
         border-radius: 5px;
-        background: #1f2937 !important;
-        color: var(--input-text-color, #f9fafb) !important;
+        background: var(--jpta-control-bg) !important;
+        color: var(--jpta-control-text) !important;
         font-size: 12px;
         line-height: 28px;
         text-align: left;
@@ -222,10 +235,10 @@
         min-width: 100%;
         max-width: min(260px, calc(100vw - 24px));
         padding: 3px;
-        border: 1px solid var(--input-border-color, #4b5563);
+        border: 1px solid var(--jpta-input-border);
         border-radius: 5px;
-        background: #1f2937;
-        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.52);
+        background: var(--jpta-control-bg);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
     }
     .jpta-related-mode-wrap.open .jpta-related-mode-menu {
         display: block;
@@ -238,7 +251,7 @@
         border: 0;
         border-radius: 4px;
         background: transparent;
-        color: var(--input-text-color, #f9fafb);
+        color: var(--jpta-control-text);
         font-size: 12px;
         line-height: 28px;
         text-align: left;
@@ -247,8 +260,8 @@
     }
     .jpta-related-mode-item:hover,
     .jpta-related-mode-item.active {
-        background: var(--button-primary-background-fill, #2563eb);
-        color: var(--button-primary-text-color, #ffffff);
+        background: var(--jpta-selected-bg);
+        color: var(--jpta-selected-text);
     }
     .jpta-list {
         display: flex;
@@ -263,10 +276,10 @@
         width: 24px;
         height: 22px;
         padding: 0;
-        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border: 1px solid var(--button-secondary-border-color, var(--jpta-border));
         border-radius: 5px;
-        background: #1f2937;
-        color: var(--button-secondary-text-color, #f9fafb);
+        background: var(--jpta-button-bg);
+        color: var(--jpta-button-text);
         cursor: pointer;
         line-height: 18px;
     }
@@ -281,11 +294,11 @@
         gap: 1px;
         max-width: 220px;
         cursor: pointer;
-        border: 1px solid var(--button-secondary-border-color, #4b5563);
+        border: 1px solid var(--button-secondary-border-color, var(--jpta-border));
         border-radius: 5px;
         padding: 4px 7px;
-        background: #1f2937;
-        color: var(--button-secondary-text-color, #f9fafb);
+        background: var(--jpta-button-bg);
+        color: var(--jpta-button-text);
         text-align: left;
         line-height: 1.22;
         white-space: nowrap;
@@ -293,8 +306,8 @@
     .jpta-item:hover,
     .jpta-item.active,
     .jpta-item.selected {
-        background: var(--button-primary-background-fill, #2563eb);
-        color: var(--button-primary-text-color, #ffffff);
+        background: var(--jpta-selected-bg);
+        color: var(--jpta-selected-text);
     }
     .jpta-main {
         display: inline-flex;
