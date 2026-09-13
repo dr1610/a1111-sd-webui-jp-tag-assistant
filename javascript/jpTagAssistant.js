@@ -37,7 +37,7 @@
         --jpta-button-text: var(--button-secondary-text-color, var(--jpta-text));
         --jpta-selected-bg: var(--button-primary-background-fill, Highlight);
         --jpta-selected-text: var(--button-primary-text-color, HighlightText);
-        margin: 6px 0 8px;
+        margin: 1px 0 6px;
         padding: 0;
         border: 1px solid var(--jpta-border);
         border-radius: 6px;
@@ -87,7 +87,7 @@
         display: none;
         position: absolute;
         z-index: 10021;
-        top: calc(100% + 4px);
+        top: calc(100% + 1px);
         left: 0;
         right: 0;
         max-height: min(380px, calc(100vh - 160px));
