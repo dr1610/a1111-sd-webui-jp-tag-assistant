@@ -37,7 +37,7 @@
         --jpta-button-text: var(--button-secondary-text-color, var(--jpta-text));
         --jpta-selected-bg: var(--button-primary-background-fill, Highlight);
         --jpta-selected-text: var(--button-primary-text-color, HighlightText);
-        margin: 8px 0 12px;
+        margin: 4px 0 8px;
         padding: 0;
         border: 1px solid var(--jpta-border);
         border-radius: 6px;
@@ -85,18 +85,15 @@
     }
     .jpta-body {
         display: none;
-        position: absolute;
-        z-index: 10021;
-        top: calc(100% + 4px);
-        left: 0;
-        right: 0;
-        max-height: min(360px, calc(100vh - 160px));
-        overflow: auto;
+        position: static;
+        max-height: none;
+        overflow: visible;
         padding: 8px;
         border: 1px solid var(--jpta-border);
+        border-width: 1px 0 0;
         border-radius: 6px;
         background: var(--jpta-body-bg);
-        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+        box-shadow: none;
     }
     .jpta-panel[open] .jpta-body {
         display: block;
@@ -403,40 +400,12 @@
         return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
     }
 
-    function settingsTabs(tab) {
-        const settings = appRoot().querySelector(`#${tab}_settings`);
-        return settings?.closest(".tabs") || null;
-    }
-
     function placementAnchor(tab) {
         const prompt = promptArea(tab);
         const negative = negativeArea(tab);
-        const start = negative || prompt;
-        if (!start) return null;
-
-        const tabs = settingsTabs(tab);
-        if (tabs && tabs.parentElement) {
-            return { element: tabs, mode: "before" };
-        }
-
-        let node = promptWrapper(start);
-        while (node && node.parentElement && node !== appRoot()) {
-            const parent = node.parentElement;
-            if (prompt && negative && parent.contains(prompt) && parent.contains(negative)) {
-                node = parent;
-                continue;
-            }
-            const parentRect = parent.getBoundingClientRect();
-            const startRect = start.getBoundingClientRect();
-            const wrapsSameRow = parentRect.top <= startRect.top + 2 && parentRect.bottom >= startRect.bottom - 2;
-            if (wrapsSameRow && parent.children.length <= 6) {
-                node = parent;
-                continue;
-            }
-            break;
-        }
-
-        return { element: node || promptWrapper(start), mode: "after" };
+        const target = negative || prompt;
+        if (!target) return null;
+        return { element: promptWrapper(target) || target, mode: "after" };
     }
 
     function insertTag(area, tag) {
