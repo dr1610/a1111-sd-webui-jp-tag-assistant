@@ -1,5 +1,7 @@
 # a1111-sd-webui-jp-tag-assistant
 
+[日本語の説明・使い方](README_JA.md) | English
+
 Japanese-to-Danbooru tag search and suggestion extension for ReForge / Forge / AUTOMATIC1111 WebUI.
 
 `JP Tag Assistant` adds a compact collapsible search panel under the txt2img/img2img negative prompt area. Type Japanese words such as `腕`, `腕組み`, `赤面`, or `長髪`, then click candidate tags to insert them into the prompt.
