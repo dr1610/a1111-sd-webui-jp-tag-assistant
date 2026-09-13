@@ -25,9 +25,9 @@
 
     const css = `
     .jpta-panel {
-        --jpta-panel-bg: var(--block-background-fill, Canvas);
-        --jpta-body-bg: var(--block-background-fill, var(--background-fill-primary, Canvas));
-        --jpta-control-bg: var(--input-background-fill, Field);
+        --jpta-control-bg: var(--input-background-fill, var(--background-fill-secondary, Field));
+        --jpta-panel-bg: var(--block-background-fill, var(--jpta-control-bg));
+        --jpta-body-bg: var(--jpta-control-bg);
         --jpta-control-text: var(--input-text-color, var(--body-text-color, FieldText));
         --jpta-text: var(--body-text-color, CanvasText);
         --jpta-muted-text: var(--body-text-color-subdued, var(--body-text-color, CanvasText));
@@ -37,7 +37,7 @@
         --jpta-button-text: var(--button-secondary-text-color, var(--jpta-text));
         --jpta-selected-bg: var(--button-primary-background-fill, Highlight);
         --jpta-selected-text: var(--button-primary-text-color, HighlightText);
-        margin: 4px 0 8px;
+        margin: 6px 0 8px;
         padding: 0;
         border: 1px solid var(--jpta-border);
         border-radius: 6px;
@@ -85,15 +85,18 @@
     }
     .jpta-body {
         display: none;
-        position: static;
-        max-height: none;
-        overflow: visible;
+        position: absolute;
+        z-index: 10021;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: min(380px, calc(100vh - 160px));
+        overflow: auto;
         padding: 8px;
         border: 1px solid var(--jpta-border);
-        border-width: 1px 0 0;
         border-radius: 6px;
         background: var(--jpta-body-bg);
-        box-shadow: none;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
     }
     .jpta-panel[open] .jpta-body {
         display: block;
@@ -400,11 +403,22 @@
         return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
     }
 
+    function settingsTabs(tab) {
+        const settings = appRoot().querySelector(`#${tab}_settings`);
+        return settings?.closest(".tabs") || null;
+    }
+
     function placementAnchor(tab) {
         const prompt = promptArea(tab);
         const negative = negativeArea(tab);
         const target = negative || prompt;
         if (!target) return null;
+
+        const tabs = settingsTabs(tab);
+        if (tabs && tabs.parentElement) {
+            return { element: tabs, mode: "before" };
+        }
+
         return { element: promptWrapper(target) || target, mode: "after" };
     }
 
