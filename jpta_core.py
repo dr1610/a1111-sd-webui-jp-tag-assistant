@@ -485,8 +485,6 @@ class JPTAIndex:
                 score = 850
             elif q in t:
                 score = 760
-            elif t in q:
-                score = 700
             else:
                 score = 0
             if score > best_score:

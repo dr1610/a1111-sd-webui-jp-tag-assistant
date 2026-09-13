@@ -359,8 +359,6 @@ def score_entry(query, entry):
             score = 850
         elif q in t:
             score = 760
-        elif t in q:
-            score = 700
         else:
             score = 0
         if score > best_score:
@@ -523,7 +521,7 @@ def on_ui_settings():
     )
     shared.opts.add_option(
         "jpta_relatedModeLanguage",
-        shared.OptionInfo("Japanese", "Related mode display language", gr.Dropdown, {"choices": ["Japanese", "English"]}, section=JPTA_SECTION),
+        shared.OptionInfo("Japanese", "Display language / 表示言語", gr.Dropdown, {"choices": ["Japanese", "English"]}, section=JPTA_SECTION),
     )
     shared.opts.add_option(
         "jpta_excludeLicensedDefault",

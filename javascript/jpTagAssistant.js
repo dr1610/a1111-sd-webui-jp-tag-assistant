@@ -9,6 +9,8 @@
         relatedMode: {},
         relatedHistory: {},
         relatedHistoryIndex: {},
+        searchRequest: {},
+        relatedRequest: {},
         outsideClickAttached: false,
     };
 
@@ -22,6 +24,27 @@
         "All": "すべて",
         "Off": "オフ",
     };
+
+    const uiLabels = {
+        Japanese: {
+            candidates: "候補", related: "関連候補", search: "検索",
+            placeholder: "日本語・英語でタグ検索...", exclude: "版権/キャラ除外",
+            excludeTitle: "版権・キャラクターの候補を除外", mode: "関連候補の種類",
+            back: "関連候補を戻る", forward: "関連候補を進む",
+            loading: "検索中...", empty: "候補が見つかりません", error: "検索に失敗しました",
+        },
+        English: {
+            candidates: "Candidates", related: "Related", search: "Search",
+            placeholder: "Search Japanese or English tags...", exclude: "Exclude copyright/characters",
+            excludeTitle: "Exclude copyright and character candidates", mode: "Related tag mode",
+            back: "Related back", forward: "Related forward",
+            loading: "Searching...", empty: "No candidates found", error: "Search failed",
+        },
+    };
+
+    function uiText(key) {
+        return uiLabels[state.config?.relatedModeLanguage === "English" ? "English" : "Japanese"][key];
+    }
 
     // Gradio's reset can load later; keep these rules more specific than its controls.
     const css = `
@@ -374,12 +397,14 @@
 
     async function fetchJson(url) {
         const separator = url.includes("?") ? "&" : "?";
-        const response = await fetch(`${url}${separator}${Date.now()}`);
-        if (!response.ok) {
-            console.error(`JP Tag Assistant: ${url} returned ${response.status}`);
+        try {
+            const response = await fetch(`${url}${separator}${Date.now()}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`JP Tag Assistant: ${url}`, error);
             return null;
         }
-        return response.json();
     }
 
     async function loadConfig() {
@@ -561,27 +586,28 @@
             <summary>JP Tag Assistant</summary>
             <div class="jpta-body">
             <div class="jpta-top">
-                <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="日本語でタグ検索..." />
-                <button class="jpta-search" type="button">Search</button>
-                <label class="jpta-exclude-licensed" title="Exclude copyright and character candidates">
+                <input class="jpta-input" type="text" autocomplete="off" spellcheck="false" placeholder="${uiText("placeholder")}" />
+                <button class="jpta-search" type="button">${uiText("search")}</button>
+                <label class="jpta-exclude-licensed" title="${uiText("excludeTitle")}">
                     <input class="jpta-exclude-licensed-input" type="checkbox" />
-                    <span>版権/キャラ除外</span>
+                    <span>${uiText("exclude")}</span>
                 </label>
                 <div class="jpta-related-mode-wrap">
-                    <button class="jpta-related-mode" type="button" title="Related tag mode" aria-haspopup="listbox" aria-expanded="false"></button>
+                    <button class="jpta-related-mode" type="button" title="${uiText("mode")}" aria-haspopup="listbox" aria-expanded="false"></button>
                     <div class="jpta-related-mode-menu" role="listbox"></div>
                 </div>
             </div>
             <div class="jpta-content">
-            <div class="jpta-section-title">Candidates</div>
-            <div class="jpta-list jpta-results"></div>
-            <div class="jpta-section-title"><span>Related</span><span class="jpta-related-nav"><button class="jpta-related-back" type="button" title="Related back">&lt;</button><button class="jpta-related-forward" type="button" title="Related forward">&gt;</button></span></div>
+            <div class="jpta-section-title">${uiText("candidates")}</div>
+            <div class="jpta-list jpta-results" aria-live="polite"></div>
+            <div class="jpta-section-title"><span>${uiText("related")}</span><span class="jpta-related-nav"><button class="jpta-related-back" type="button" title="${uiText("back")}">&lt;</button><button class="jpta-related-forward" type="button" title="${uiText("forward")}">&gt;</button></span></div>
             <div class="jpta-list jpta-related"></div>
             </div>
             </div>
         `;
 
         const input = panel.querySelector(".jpta-input");
+        let composing = false;
         const search = panel.querySelector(".jpta-search");
         const excludeLicensed = panel.querySelector(".jpta-exclude-licensed-input");
         excludeLicensed.checked = state.config?.excludeLicensedDefault !== false;
@@ -624,6 +650,7 @@
         search.addEventListener("click", () => runSearch(tab, panel));
         excludeLicensed.addEventListener("change", () => runSearch(tab, panel));
         input.addEventListener("keydown", (event) => {
+            if (composing || event.isComposing || event.keyCode === 229) return;
             const items = state.candidates[tab] || [];
             if ((event.key === "ArrowDown" || event.key === "ArrowUp") && items.length) {
                 event.preventDefault();
@@ -645,10 +672,21 @@
                 runSearch(tab, panel);
             }
         });
-        input.addEventListener("input", () => {
+        const queueSearch = (event) => {
             clearTimeout(input._jptaTimer);
+            invalidateSearch(tab, panel);
+            if (composing || event?.isComposing) return;
             input._jptaTimer = setTimeout(() => runSearch(tab, panel), 220);
+        };
+        input.addEventListener("compositionstart", () => {
+            composing = true;
+            queueSearch();
         });
+        input.addEventListener("compositionend", () => {
+            composing = false;
+            queueSearch();
+        });
+        input.addEventListener("input", queueSearch);
         return panel;
     }
 
@@ -704,8 +742,16 @@
         });
     }
 
+    function invalidateSearch(tab, panel) {
+        state.searchRequest[tab] = (state.searchRequest[tab] || 0) + 1;
+        renderItems(panel.querySelector(".jpta-results"), tab, [], { kind: "candidates" });
+        return state.searchRequest[tab];
+    }
+
     async function runSearch(tab, panel) {
         if (!state.config?.enable) return;
+        clearTimeout(panel.querySelector(".jpta-input")._jptaTimer);
+        const request = invalidateSearch(tab, panel);
         const query = panel.querySelector(".jpta-input").value.trim();
         const results = panel.querySelector(".jpta-results");
         if (!query) {
@@ -714,14 +760,20 @@
         }
         const limit = state.config.maxResults || 32;
         const excludeLicensed = panel.querySelector(".jpta-exclude-licensed-input")?.checked ? "true" : "false";
+        results.textContent = uiText("loading");
         const data = await fetchJson(`jptagapi/v1/search?q=${encodeURIComponent(query)}&limit=${limit}&exclude_licensed=${excludeLicensed}`);
+        if (state.searchRequest[tab] !== request) return;
         renderItems(results, tab, data?.results || [], { kind: "candidates" });
+        if (!data) results.textContent = uiText("error");
+        else if (!data.results?.length) results.textContent = uiText("empty");
     }
 
     async function loadRelated(tab, tag, recordHistory = true) {
         const panel = appRoot().querySelector(`.jpta-panel[data-jpta-tab="${tab}"]`);
         const related = panel?.querySelector(".jpta-related");
         if (!related) return;
+        const request = state.relatedRequest[tab] = (state.relatedRequest[tab] || 0) + 1;
+        renderItems(related, tab, []);
         if (recordHistory) recordRelatedHistory(tab, tag);
         updateRelatedNav(tab, panel);
         const mode = selectedRelatedMode(tab, panel);
@@ -732,6 +784,7 @@
         }
         const limit = state.config.relatedMaxResults || 24;
         const data = await fetchJson(`jptagapi/v1/related?tag=${encodeURIComponent(tag)}&limit=${limit}&mode=${encodeURIComponent(mode)}`);
+        if (state.relatedRequest[tab] !== request) return;
         renderItems(related, tab, data?.results || []);
         updateRelatedNav(tab, panel);
     }

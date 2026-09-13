@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>JP Tag Assistant UI regression tests</title>
+<style>body { font: 14px/1.5 sans-serif; margin: 24px; } #fixture { margin-top: 24px; max-width: 800px; }</style>
+<h1>JP Tag Assistant UI regression tests</h1>
+<pre id="report">Running...</pre>
+<div id="fixture"></div>
+<script type="module">
+const source = await (await fetch('../javascript/jpTagAssistant.js')).text();
+const injected = document.createElement('script');
+injected.textContent = source.replace('onUiUpdate(setup);', 'globalThis.testAPI = {state, ensureStyle, createPanel, runSearch, loadRelated, renderItems};');
+document.head.append(injected);
+const api = globalThis.testAPI;
+const fixture = document.querySelector('#fixture');
+const report = document.querySelector('#report');
+const lines = [];
+let pending = [];
+window.fetch = url => new Promise((resolve, reject) => pending.push({url, resolve, reject}));
+const assert = (value, message) => { if (!value) throw new Error(message); };
+const answer = (request, tag) => request.resolve({ok: true, json: async () => ({results: [{tag, labelJa: '', count: 10}]})});
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+function reset(language = 'Japanese') {
+    for (const input of fixture.querySelectorAll('.jpta-input')) clearTimeout(input._jptaTimer);
+    fixture.innerHTML = '<div id="txt2img_prompt"><textarea></textarea></div><div id="txt2img_neg_prompt"><textarea></textarea></div>';
+    Object.assign(api.state, {config: {enable: true, relatedModeLanguage: language}, candidates: {}, searchRequest: {}, relatedRequest: {}, relatedMode: {}, relatedHistory: {}, relatedHistoryIndex: {}});
+    pending = [];
+    const panel = api.createPanel('txt2img');
+    fixture.append(panel);
+    api.ensureStyle();
+    return panel;
+}
+async function test(name, fn) {
+    let timeout;
+    try {
+        await Promise.race([fn(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Test timed out')), 5000); })]);
+        lines.push('PASS ' + name);
+    }
+    catch (error) { lines.push('FAIL ' + name + ': ' + error.message); }
+    finally { clearTimeout(timeout); }
+    report.textContent = lines.join('\n');
+}
+await test('Japanese and English labels', async () => {
+    for (const [lang, candidate, related, search] of [['Japanese', '候補', '関連候補', '検索'], ['English', 'Candidates', 'Related', 'Search']]) {
+        const panel = reset(lang);
+        const titles = panel.querySelectorAll('.jpta-section-title');
+        assert(titles[0].textContent === candidate, lang + ' candidates');
+        assert(titles[1].textContent.includes(related), lang + ' related');
+        assert(panel.querySelector('.jpta-search').textContent === search, lang + ' search');
+    }
+});
+await test('Older search responses cannot overwrite newer results', async () => {
+    const panel = reset(), input = panel.querySelector('input');
+    input.value = 'old'; const oldSearch = api.runSearch('txt2img', panel);
+    input.value = 'new'; const newSearch = api.runSearch('txt2img', panel);
+    answer(pending[1], 'new'); await newSearch;
+    answer(pending[0], 'old'); await oldSearch;
+    assert(panel.querySelector('.jpta-tag').textContent === 'new', 'stale result displayed');
+});
+await test('Clearing input invalidates in-flight requests and keyboard candidates', async () => {
+    const panel = reset(), input = panel.querySelector('input');
+    input.value = 'old'; const search = api.runSearch('txt2img', panel);
+    input.value = ''; input.dispatchEvent(new Event('input'));
+    answer(pending[0], 'old'); await search;
+    assert(panel.querySelector('.jpta-results').textContent === '', 'stale result after clearing');
+    assert(api.state.candidates.txt2img.length === 0, 'stale keyboard candidate');
+});
+await test('IME Enter does not insert tags; search waits for composition end', async () => {
+    const panel = reset(), input = panel.querySelector('input');
+    api.renderItems(panel.querySelector('.jpta-results'), 'txt2img', [{tag: 'unwanted'}], {kind: 'candidates'});
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', isComposing: true, bubbles: true}));
+    assert(fixture.querySelector('textarea').value === '', 'IME Enter inserted a tag');
+    input.dispatchEvent(new CompositionEvent('compositionstart'));
+    input.value = 'レズビアン';
+    input.dispatchEvent(new InputEvent('input', {isComposing: true}));
+    await pause(250);
+    assert(pending.length === 0, 'request while composing');
+    input.dispatchEvent(new CompositionEvent('compositionend'));
+    await pause(250);
+    assert(pending.length === 1, 'missing completed-composition search');
+    answer(pending[0], 'yuri'); await pause(0);
+    assert(panel.querySelector('.jpta-tag').textContent === 'yuri', 'composition result missing');
+});
+await test('New input cannot insert an old candidate during debounce', async () => {
+    const panel = reset(), input = panel.querySelector('input');
+    api.renderItems(panel.querySelector('.jpta-results'), 'txt2img', [{tag: 'old'}], {kind: 'candidates'});
+    input.value = 'new'; input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+    assert(fixture.querySelector('textarea').value === '', 'old tag inserted');
+    answer(pending[0], 'new'); await pause(0);
+});
+await test('Related responses respect newer selection and Off', async () => {
+    const panel = reset();
+    const old = api.loadRelated('txt2img', 'old');
+    const recent = api.loadRelated('txt2img', 'recent');
+    answer(pending[1], 'recent-related'); await recent;
+    answer(pending[0], 'old-related'); await old;
+    assert(panel.querySelector('.jpta-related .jpta-tag').textContent === 'recent-related', 'stale related');
+    const delayed = api.loadRelated('txt2img', 'delayed');
+    api.state.selected.txt2img = 'delayed';
+    panel.querySelector('.jpta-related-mode-item[data-mode="Off"]').click();
+    answer(pending[2], 'must-not-appear'); await delayed;
+    assert(panel.querySelector('.jpta-related').textContent === '', 'Off was overwritten');
+});
+await test('Network errors produce a localized message', async () => {
+    const panel = reset(); panel.querySelector('input').value = 'query';
+    const task = api.runSearch('txt2img', panel);
+    pending[0].reject(new Error('Simulated network failure')); await task;
+    assert(panel.querySelector('.jpta-results').textContent === '検索に失敗しました', 'missing error state');
+});
+reset();
+const failed = lines.filter(line => line.startsWith('FAIL')).length;
+document.title = failed ? 'FAIL: JP Tag Assistant tests' : 'PASS: JP Tag Assistant tests';
+report.dataset.result = failed ? 'fail' : 'pass';
+</script>
+</html>

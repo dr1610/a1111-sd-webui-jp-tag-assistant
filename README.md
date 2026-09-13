@@ -89,10 +89,10 @@ Settings are available under `JP Tag Assistant`.
 - `Maximum search results`
 - `Maximum related tags`
 - `Related tag mode default`
-- `Related mode display language`
+- `Display language / 表示言語` (Japanese or English)
 - `Exclude copyright/character candidates by default`
 - `Use machine-translated Japanese labels`
 - `Maximum cached relations per tag`
 
-`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `kneeling` and `school_uniform` use Person, `outdoors` and `from_below` use Scene / Objects, `masterpiece` uses Style / Quality, and `missionary` uses NSFW. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. The Related dropdown is shown in Japanese by default; set `Related mode display language` to English if you prefer the English labels.
+`Related tag mode default` is `Auto` by default. Auto infers the related direction from the selected tag: for example, `kneeling` and `school_uniform` use Person, `outdoors` and `from_below` use Scene / Objects, `masterpiece` uses Style / Quality, and `missionary` uses NSFW. The t2i/i2i panel also has a Related dropdown for one-off overrides, including Off. `Display language / 表示言語` controls the candidate/related headings, search button, placeholder, tooltips, search status and Related dropdown. Japanese is the default; select English for English labels. This reuses the existing `jpta_relatedModeLanguage` preference. Reload the browser page after changing it.
 Related categories are intentionally non-exclusive: for example, Person mode can include person-related adult tags such as `cum_in_mouth`, while NSFW mode prioritizes adult-oriented tags without making the list strictly exclusive.
