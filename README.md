@@ -55,6 +55,10 @@ This extension is meant to complement tag completion extensions. Use JP Tag Assi
 5. Click a candidate to insert it into the prompt.
 6. Shift+click to insert it into the negative prompt.
 
+The panel sits directly below the negative prompt. Search results use an opaque, theme-aware background so the generation controls underneath do not show through. Results scroll independently of the Related mode menu.
+
+When using multiple Stability Matrix packages (for example, reForge and Forge - Neo), update the extension inside the package you actually launch. After updating, hard-refresh the WebUI page with Ctrl+F5 to reload its JavaScript.
+
 ### ComfyUI
 
 This repository can also be installed as a ComfyUI custom node.

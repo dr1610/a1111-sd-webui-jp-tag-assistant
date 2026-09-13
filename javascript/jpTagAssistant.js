@@ -23,10 +23,11 @@
         "Off": "オフ",
     };
 
+    // Gradio's reset can load later; keep these rules more specific than its controls.
     const css = `
-    .jpta-panel {
+    .jpta-panel.jpta-panel {
         --jpta-control-bg: var(--input-background-fill, var(--background-fill-secondary, Field));
-        --jpta-panel-bg: var(--block-background-fill, var(--jpta-control-bg));
+        --jpta-panel-bg: var(--jpta-control-bg);
         --jpta-body-bg: var(--jpta-control-bg);
         --jpta-control-text: var(--input-text-color, var(--body-text-color, FieldText));
         --jpta-text: var(--body-text-color, CanvasText);
@@ -37,7 +38,7 @@
         --jpta-button-text: var(--button-secondary-text-color, var(--jpta-text));
         --jpta-selected-bg: var(--button-primary-background-fill, Highlight);
         --jpta-selected-text: var(--button-primary-text-color, HighlightText);
-        margin: 1px 0 6px;
+        margin: 4px 0 0;
         padding: 0;
         border: 1px solid var(--jpta-border);
         border-radius: 6px;
@@ -49,66 +50,74 @@
         position: relative;
         z-index: 50;
         width: 100%;
-        flex: 0 0 100%;
+        flex: 0 0 auto;
         align-self: flex-start;
         box-sizing: border-box;
         height: auto !important;
         min-height: 0 !important;
     }
-    .jpta-panel[open] {
+    .jpta-panel.jpta-panel[open] {
         z-index: 10020;
     }
-    .jpta-panel summary {
+    .gradio-column > .jpta-panel.jpta-panel {
+        margin-top: calc(4px - var(--layout-gap, 16px));
+    }
+    .jpta-panel.jpta-panel summary {
         display: flex;
         align-items: center;
         gap: 8px;
-        min-height: 30px;
-        padding: 6px 8px;
+        min-height: 26px;
+        padding: 4px 8px;
+        box-sizing: border-box;
+        list-style: none;
         cursor: pointer;
         color: var(--jpta-muted-text);
         font-size: 12px;
         font-weight: 700;
         user-select: none;
     }
-    .jpta-panel summary::-webkit-details-marker {
+    .jpta-panel.jpta-panel summary::-webkit-details-marker {
         display: none;
     }
-    .jpta-panel summary::before {
+    .jpta-panel.jpta-panel summary::before {
         content: ">";
         display: inline-block;
         width: 10px;
         transform: rotate(0deg);
         transition: transform 120ms ease;
     }
-    .jpta-panel[open] summary::before {
+    .jpta-panel.jpta-panel[open] summary::before {
         transform: rotate(90deg);
     }
-    .jpta-body {
+    .jpta-panel.jpta-panel .jpta-body {
         display: none;
         position: absolute;
         z-index: 10021;
         top: calc(100% + 1px);
         left: 0;
         right: 0;
-        max-height: min(380px, calc(100vh - 160px));
-        overflow: auto;
+        overflow: visible;
         padding: 8px;
         border: 1px solid var(--jpta-border);
         border-radius: 6px;
         background: var(--jpta-body-bg);
         box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
     }
-    .jpta-panel[open] .jpta-body {
+    .jpta-panel.jpta-panel[open] .jpta-body {
         display: block;
     }
-    .jpta-top {
+    .jpta-panel.jpta-panel .jpta-content {
+        max-height: min(320px, calc(100vh - 220px));
+        overflow: auto;
+    }
+    .jpta-panel.jpta-panel .jpta-top {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 7px;
     }
-    .jpta-input {
+    .jpta-panel.jpta-panel .jpta-input {
         flex: 1 1 auto;
         min-width: 90px;
         height: 30px;
@@ -120,10 +129,10 @@
         box-shadow: none;
         outline: none;
     }
-    .jpta-input::placeholder {
+    .jpta-panel.jpta-panel .jpta-input::placeholder {
         color: var(--input-placeholder-color, var(--jpta-muted-text));
     }
-    .jpta-search {
+    .jpta-panel.jpta-panel .jpta-search {
         flex: 0 0 auto;
         height: 30px;
         padding: 3px 10px;
@@ -133,7 +142,7 @@
         color: var(--jpta-button-text);
         cursor: pointer;
     }
-    .jpta-exclude-licensed {
+    .jpta-panel.jpta-panel .jpta-exclude-licensed {
         flex: 0 0 auto;
         display: inline-flex;
         align-items: center;
@@ -144,7 +153,7 @@
         white-space: nowrap;
         user-select: none;
     }
-    .jpta-exclude-licensed input {
+    .jpta-panel.jpta-panel .jpta-exclude-licensed input {
         appearance: none;
         -webkit-appearance: none;
         width: 14px;
@@ -158,11 +167,11 @@
         background: var(--checkbox-background-color, var(--jpta-control-bg));
         cursor: pointer;
     }
-    .jpta-exclude-licensed input:checked {
+    .jpta-panel.jpta-panel .jpta-exclude-licensed input:checked {
         border-color: var(--jpta-selected-bg);
         background: var(--jpta-selected-bg);
     }
-    .jpta-exclude-licensed input:checked::after {
+    .jpta-panel.jpta-panel .jpta-exclude-licensed input:checked::after {
         content: "";
         position: absolute;
         left: 3px;
@@ -173,7 +182,7 @@
         border-width: 0 2px 2px 0;
         transform: rotate(45deg);
     }
-    .jpta-section-title {
+    .jpta-panel.jpta-panel .jpta-section-title {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -182,17 +191,17 @@
         color: var(--jpta-muted-text);
         font-size: 12px;
     }
-    .jpta-related-mode-wrap {
+    .jpta-panel.jpta-panel .jpta-related-mode-wrap {
         flex: 0 0 128px;
         min-width: 116px;
         max-width: 144px;
         position: relative;
     }
-    .jpta-related-mode-wrap.en {
+    .jpta-panel.jpta-panel .jpta-related-mode-wrap.en {
         flex-basis: 180px;
         max-width: 200px;
     }
-    .jpta-related-mode {
+    .jpta-panel.jpta-panel .jpta-related-mode {
         width: 100%;
         height: 30px;
         min-height: 30px;
@@ -211,7 +220,7 @@
         cursor: pointer;
         position: relative;
     }
-    .jpta-related-mode::after {
+    .jpta-panel.jpta-panel .jpta-related-mode::after {
         content: "";
         position: absolute;
         right: 8px;
@@ -225,7 +234,7 @@
         opacity: 0.75;
         pointer-events: none;
     }
-    .jpta-related-mode-menu {
+    .jpta-panel.jpta-panel .jpta-related-mode-menu {
         display: none;
         position: absolute;
         z-index: 10030;
@@ -240,10 +249,10 @@
         background: var(--jpta-control-bg);
         box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
     }
-    .jpta-related-mode-wrap.open .jpta-related-mode-menu {
+    .jpta-panel.jpta-panel .jpta-related-mode-wrap.open .jpta-related-mode-menu {
         display: block;
     }
-    .jpta-related-mode-item {
+    .jpta-panel.jpta-panel .jpta-related-mode-item {
         display: block;
         width: 100%;
         min-height: 28px;
@@ -258,21 +267,21 @@
         white-space: nowrap;
         cursor: pointer;
     }
-    .jpta-related-mode-item:hover,
-    .jpta-related-mode-item.active {
+    .jpta-panel.jpta-panel .jpta-related-mode-item:hover,
+    .jpta-panel.jpta-panel .jpta-related-mode-item.active {
         background: var(--jpta-selected-bg);
         color: var(--jpta-selected-text);
     }
-    .jpta-list {
+    .jpta-panel.jpta-panel .jpta-list {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
     }
-    .jpta-related-nav {
+    .jpta-panel.jpta-panel .jpta-related-nav {
         display: inline-flex;
         gap: 4px;
     }
-    .jpta-related-nav button {
+    .jpta-panel.jpta-panel .jpta-related-nav button {
         width: 24px;
         height: 22px;
         padding: 0;
@@ -283,16 +292,16 @@
         cursor: pointer;
         line-height: 18px;
     }
-    .jpta-related-nav button:disabled {
+    .jpta-panel.jpta-panel .jpta-related-nav button:disabled {
         cursor: default;
         opacity: 0.38;
     }
-    .jpta-item {
+    .jpta-panel.jpta-panel .jpta-item {
         display: inline-flex;
         flex-direction: column;
         align-items: flex-start;
         gap: 1px;
-        max-width: 220px;
+        max-width: min(220px, 100%);
         cursor: pointer;
         border: 1px solid var(--button-secondary-border-color, var(--jpta-border));
         border-radius: 5px;
@@ -303,34 +312,33 @@
         line-height: 1.22;
         white-space: nowrap;
     }
-    .jpta-item:hover,
-    .jpta-item.active,
-    .jpta-item.selected {
+    .jpta-panel.jpta-panel .jpta-item:hover,
+    .jpta-panel.jpta-panel .jpta-item.active,
+    .jpta-panel.jpta-panel .jpta-item.selected {
         background: var(--jpta-selected-bg);
         color: var(--jpta-selected-text);
     }
-    .jpta-main {
+    .jpta-panel.jpta-panel .jpta-main {
         display: inline-flex;
         align-items: baseline;
         max-width: 100%;
     }
-    .jpta-tag {
+    .jpta-panel.jpta-panel .jpta-tag {
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .jpta-count {
+    .jpta-panel.jpta-panel .jpta-count {
         margin-left: 5px;
         opacity: 0.68;
         font-size: 11px;
     }
-    .jpta-ja {
+    .jpta-panel.jpta-panel .jpta-ja {
         max-width: 190px;
         overflow: hidden;
         text-overflow: ellipsis;
         opacity: 0.72;
         font-size: 11px;
         font-weight: 400;
-    }
     }`;
 
     function appRoot() {
@@ -338,11 +346,13 @@
     }
 
     function ensureStyle() {
-        if (document.getElementById("jpta-style")) return;
-        const style = document.createElement("style");
-        style.id = "jpta-style";
-        style.textContent = css;
-        document.head.appendChild(style);
+        let style = document.getElementById("jpta-style");
+        if (!style) {
+            style = document.createElement("style");
+            style.id = "jpta-style";
+            document.head.appendChild(style);
+        }
+        if (style.textContent !== css) style.textContent = css;
     }
 
     function attachOutsideClickHandler() {
@@ -403,23 +413,15 @@
         return area?.closest(".block") || area?.closest(".form") || area?.parentElement;
     }
 
-    function settingsTabs(tab) {
-        const settings = appRoot().querySelector(`#${tab}_settings`);
-        return settings?.closest(".tabs") || null;
-    }
-
     function placementAnchor(tab) {
         const prompt = promptArea(tab);
         const negative = negativeArea(tab);
         const target = negative || prompt;
         if (!target) return null;
 
-        const tabs = settingsTabs(tab);
-        if (tabs && tabs.parentElement) {
-            return { element: tabs, mode: "before" };
-        }
-
-        return { element: promptWrapper(target) || target, mode: "after" };
+        // Gradio textbox forms arrange their children horizontally; use the whole row.
+        const row = target.closest(".prompt-row") || target.closest(".form");
+        return { element: row || promptWrapper(target) || target, mode: "after" };
     }
 
     function insertTag(area, tag) {
@@ -570,10 +572,12 @@
                     <div class="jpta-related-mode-menu" role="listbox"></div>
                 </div>
             </div>
+            <div class="jpta-content">
             <div class="jpta-section-title">Candidates</div>
             <div class="jpta-list jpta-results"></div>
             <div class="jpta-section-title"><span>Related</span><span class="jpta-related-nav"><button class="jpta-related-back" type="button" title="Related back">&lt;</button><button class="jpta-related-forward" type="button" title="Related forward">&gt;</button></span></div>
             <div class="jpta-list jpta-related"></div>
+            </div>
             </div>
         `;
 
