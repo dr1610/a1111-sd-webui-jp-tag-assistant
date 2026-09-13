@@ -30,6 +30,8 @@ The extension reads data from the `tags` folder.
 
 `danbooru_tags_cooccurrence.csv.gz` is unpacked automatically on startup when the raw CSV is missing.
 
+The bundled English list contains 201,269 tags from the 2026-04-01 snapshot. See [data sources and update details](tags/SOURCES.md) for provenance, Japanese label coverage, and Related data dates. User dictionaries are not replaced by this data update.
+
 ## User Dictionary
 
 Create `tags/jp_tag_user.csv` to add or override search phrases.
